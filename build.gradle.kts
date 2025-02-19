@@ -9,8 +9,24 @@ repositories {
     mavenCentral()
 }
 
+val exposedVersion: String by project
 dependencies {
     testImplementation(kotlin("test"))
+
+    implementation("io.ktor:ktor-server-core:3.0.0")
+    implementation("io.ktor:ktor-client-core:3.0.0")
+
+    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-kotlin-datetime:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-json:$exposedVersion")
+
+    implementation("org.postgresql:postgresql:42.7.5")
+
+    implementation("org.liquibase:liquibase-core:4.31.1")
+
+    runtimeOnly("io.insert-koin:koin-core:4.0.2")
 }
 
 tasks.test {
