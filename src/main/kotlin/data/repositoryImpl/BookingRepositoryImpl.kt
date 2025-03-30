@@ -1,36 +1,50 @@
 package data.repositoryImpl
 
+import data.db.entities.BookingDbModel
+import data.mappers.BookingMapper
+import data.mappers.Converter
+import data.mappers.enums.BookingStatusMapper
 import domain.entities.Booking
 import domain.repository.BookingRepository
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.transaction
 
-class BookingRepositoryImpl(): BookingRepository {
-    var bookingList = mutableListOf<Booking>()
-    private var autoIncrementId = 0
+class BookingRepositoryImpl : BookingRepository {
+    override fun addBooking(booking: Booking): Booking = transaction {
+        val id = BookingDbModel.insertAndGetId {
+            it[eventId] = booking.eventId
+            it[userId] = booking.userId
+            it[bookingDate] = Converter.convertDateToTimestamp(booking.bookingDate)
+            it[status] = BookingStatusMapper.fromEnumToDbModel(booking.status)
+        }.value
 
-    override fun addBooking(booking: Booking) {
-        if (booking.id == Booking.UNDEFINED_ID)
-            booking.id = autoIncrementId++
-        bookingList.add(booking)
+        booking.copy(id = id)
     }
 
-    override fun deleteBooking(booking: Booking) {
-        val id = bookingList.indexOf(booking)
-        bookingList.removeAt(id)
+    override fun deleteBooking(bookingId: Int) = transaction {
+        BookingDbModel.deleteWhere { BookingDbModel.id eq bookingId }
     }
 
-    override fun editBooking(booking: Booking) {
-        val oldBooking = getBooking(booking.id)
-        bookingList.remove(oldBooking)
-        addBooking(booking)
+    override fun editBooking(booking: Booking) = transaction {
+        BookingDbModel.update({ BookingDbModel.id eq booking.id }) {
+            it[eventId] = booking.eventId
+            it[userId] = booking.userId
+            it[bookingDate] = Converter.convertDateToTimestamp(booking.bookingDate)
+            it[status] = BookingStatusMapper.fromEnumToDbModel(booking.status)
+        }
     }
 
-    override fun getBooking(bookingId: Int): Booking {
-        return bookingList.find {
-            it.id == bookingId
-        } ?: throw RuntimeException("Element with id = $bookingId not found")
+    override fun getBooking(bookingId: Int): Booking = transaction {
+        BookingDbModel.selectAll().where { BookingDbModel.id eq bookingId }
+            .map { row ->
+                    BookingMapper.fromDbModelToEntity(row)
+            }.firstOrNull() ?: throw NoSuchElementException("Booking $bookingId not found")
     }
 
-    override fun getAllBookings(): List<Booking> {
-        return bookingList
+    override fun getAllBookings(): List<Booking> = transaction {
+        BookingDbModel.selectAll().map { row ->
+            BookingMapper.fromDbModelToEntity(row)
+        }
     }
 }

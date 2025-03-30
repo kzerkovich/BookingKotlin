@@ -1,97 +1,111 @@
 package data.repositoryImpl
 
+import BaseCrudTest
+import domain.Roles
 import domain.TicketStatus
+import domain.entities.Event
 import domain.entities.Ticket
-import org.junit.jupiter.api.DisplayName
+import domain.entities.User
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.assertThrows
+import java.util.*
 
-class TicketRepositoryImplTest {
-    private val testTicketRepositoryImpl: TicketRepositoryImpl = TicketRepositoryImpl()
+class TicketCrudTest : BaseCrudTest() {
+    private val ticketRepo = TicketRepositoryImpl()
+    private val eventRepo = EventRepositoryImpl()
+    private val userRepo = UsersRepositoryImpl()
 
-    private val ticketTest1 = Ticket(
-        id = -1,
-        eventId = EVENT_ID,
-        userId = USER_ID
-    )
-    private val ticketTest2 = Ticket(
-        id = -1,
-        eventId = EVENT_ID,
-        userId = USER_ID
-    )
-    private val ticketTest3 = Ticket(
-        id = 5,
-        eventId = EVENT_ID,
-        userId = USER_ID
-    )
-    private val ticketTestEdited = Ticket(
-        id = 5,
-        eventId = EVENT_ID,
-        userId = USER_ID,
-        status = TicketStatus.PURCHASED
-    )
-    @Test
-    @DisplayName("addTicket test")
-    fun addTicket() {
-        testTicketRepositoryImpl.addTicket(ticketTest1)
-        testTicketRepositoryImpl.addTicket(ticketTest2)
-        testTicketRepositoryImpl.addTicket(ticketTest3)
+    private fun createTestUser(): User {
+        return User(
+            id = 0,
+            login = "test_user_${UUID.randomUUID()}",
+            password = "SecurePass123!",
+            email = "test@example.com",
+            role = Roles.USER
+        )
+    }
 
-        assertEquals(3, testTicketRepositoryImpl.ticketList.size)
+    private fun createEvent(): Event {
+        return eventRepo.addEvent(
+            Event(
+                id = 0,
+                name = "Rock Festival",
+                date = Date(System.currentTimeMillis() + 86400000), // Завтра
+                location = "Stadium",
+                category = "Music",
+                availableTickets = 500,
+                price = 99.99
+            )
+        )
     }
 
     @Test
-    @DisplayName("deleteTicket test")
-    fun deleteTicket() {
-        testTicketRepositoryImpl.addTicket(ticketTest1)
-        testTicketRepositoryImpl.addTicket(ticketTest2)
-        testTicketRepositoryImpl.addTicket(ticketTest3)
+    fun `create, read and delete ticket`() {
+        val event = createEvent()
 
-        testTicketRepositoryImpl.deleteTicket(ticketTest1)
-        assertEquals(2, testTicketRepositoryImpl.ticketList.size)
+        val user = userRepo.addUser(createTestUser())
 
-        testTicketRepositoryImpl.deleteTicket(ticketTest2)
-        assertEquals(1, testTicketRepositoryImpl.ticketList.size)
+        val ticket = ticketRepo.addTicket(
+            Ticket(
+                id = 0,
+                eventId = event.id,
+                userId = user.id,
+                status = TicketStatus.AVAILABLE
+            )
+        )
 
-        testTicketRepositoryImpl.deleteTicket(ticketTest3)
-        assertEquals(0, testTicketRepositoryImpl.ticketList.size)
+        val foundTicket = ticketRepo.getTicket(ticket.id)
+        assertAll(
+            { assertEquals(event.id, foundTicket.eventId) },
+            { assertEquals(TicketStatus.AVAILABLE, foundTicket.status) },
+            { assertEquals(foundTicket.userId, user.id) }
+        )
+
+        ticketRepo.deleteTicket(ticket.id)
+        assertThrows<NoSuchElementException> {
+            ticketRepo.getTicket(ticket.id)
+        }
     }
 
     @Test
-    @DisplayName("editTicket test")
-    fun editTicket() {
-        testTicketRepositoryImpl.addTicket(ticketTest1)
-        testTicketRepositoryImpl.addTicket(ticketTest2)
-        testTicketRepositoryImpl.addTicket(ticketTest3)
+    fun `update ticket status and user`() {
+        val event = createEvent()
+        val user = userRepo.addUser(createTestUser())
 
-        testTicketRepositoryImpl.editTicket(ticketTestEdited)
-        assertEquals(testTicketRepositoryImpl.getTicket(5).status, TicketStatus.PURCHASED)
+        val ticket = ticketRepo.addTicket(
+            Ticket(
+                id = 0,
+                eventId = event.id,
+                userId = user.id,
+                status = TicketStatus.AVAILABLE
+            )
+        )
+
+        val updatedTicket = ticket.copy(
+            status = TicketStatus.BOOKED,
+            userId = user.id
+        )
+        ticketRepo.editTicket(updatedTicket)
+
+        val foundTicket = ticketRepo.getTicket(ticket.id)
+        assertAll(
+            { assertEquals(TicketStatus.BOOKED, foundTicket.status) },
+            { assertEquals(user.id, foundTicket.userId) }
+        )
     }
 
     @Test
-    @DisplayName("getTicket test")
-    fun getTicket() {
-        testTicketRepositoryImpl.addTicket(ticketTest1)
-        testTicketRepositoryImpl.addTicket(ticketTest2)
-        testTicketRepositoryImpl.addTicket(ticketTest3)
-
-        assertEquals(ticketTest1, testTicketRepositoryImpl.getTicket(0))
-        assertEquals(ticketTest2, testTicketRepositoryImpl.getTicket(1))
-        assertEquals(ticketTest3, testTicketRepositoryImpl.getTicket(5))
-    }
-
-    @Test
-    @DisplayName("getAllTickets test")
-    fun getAllTickets() {
-        testTicketRepositoryImpl.addTicket(ticketTest1)
-        testTicketRepositoryImpl.addTicket(ticketTest2)
-        testTicketRepositoryImpl.addTicket(ticketTest3)
-
-        assertEquals(mutableListOf(ticketTest1, ticketTest2,ticketTest3), testTicketRepositoryImpl.getAllTickets())
-    }
-
-    companion object {
-        private const val EVENT_ID = 10
-        private const val USER_ID = 100
+    fun `fail to create ticket for non-existing event`() {
+        assertThrows<Exception> {
+            ticketRepo.addTicket(
+                Ticket(
+                    id = 0,
+                    eventId = 999,
+                    userId = 0,
+                    status = TicketStatus.AVAILABLE
+                )
+            )
+        }
     }
 }

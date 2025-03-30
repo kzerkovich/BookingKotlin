@@ -1,104 +1,121 @@
 package data.repositoryImpl
 
+import BaseCrudTest
+import domain.BookingStatus
+import domain.Roles
 import domain.entities.Booking
+import domain.entities.Event
+import domain.entities.User
+import org.junit.jupiter.api.Assertions.assertAll
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.*
 
-class BookingRepositoryImplTest {
-    private val  testBookingRepositoryImpl: BookingRepositoryImpl = BookingRepositoryImpl()
+class BookingCrudTest : BaseCrudTest() {
+    private val bookingRepo = BookingRepositoryImpl()
+    private val eventRepo = EventRepositoryImpl()
+    private val userRepo = UsersRepositoryImpl()
 
-    private val bookingTest1 = Booking(
-        id = -1,
-        bookingDate = Date(System.currentTimeMillis()),
-        eventID = EVENT_ID,
-        userID = USER_ID
-    )
+    private fun createEvent(): Event {
+        return eventRepo.addEvent(
+            Event(
+                id = 0,
+                name = "Tech Conference",
+                date = Date(System.currentTimeMillis() + 172800000),
+                location = "Convention Center",
+                category = "Technology",
+                availableTickets = 200,
+                price = 299.99
+            )
+        )
+    }
 
-    private val bookingTest2 = Booking(
-        id = -1,
-        bookingDate = Date(System.currentTimeMillis()),
-        eventID = EVENT_ID,
-        userID = USER_ID
-    )
-
-    private val bookingTest3 = Booking(
-        id = 10,
-        bookingDate = Date(System.currentTimeMillis()),
-        eventID = EVENT_ID,
-        userID = USER_ID
-    )
-
-    private val bookingTestEdited = Booking(
-        id = 10,
-        bookingDate = Date(System.currentTimeMillis()),
-        eventID = EVENT_ID,
-        userID = USER_ID + 100
-    )
-
-    @Test
-    @DisplayName("addBooking test")
-    fun addBooking() {
-        testBookingRepositoryImpl.addBooking(bookingTest1)
-        testBookingRepositoryImpl.addBooking(bookingTest2)
-        testBookingRepositoryImpl.addBooking(bookingTest3)
-
-        assertEquals(3, testBookingRepositoryImpl.bookingList.size)
+    private fun createUser(): User {
+        return userRepo.addUser(
+            User(
+                id = 0,
+                login = "user_${UUID.randomUUID()}",
+                password = "SecurePass!123",
+                email = "booking_test@example.com",
+                role = Roles.USER
+            )
+        )
     }
 
     @Test
-    @DisplayName("deleteBooking test")
-    fun deleteBooking() {
-        testBookingRepositoryImpl.addBooking(bookingTest1)
-        testBookingRepositoryImpl.addBooking(bookingTest2)
-        testBookingRepositoryImpl.addBooking(bookingTest3)
+    fun `create, read and delete booking`() {
+        val event = createEvent()
+        val user = createUser()
 
-        testBookingRepositoryImpl.deleteBooking(bookingTest1)
-        assertEquals(2, testBookingRepositoryImpl.bookingList.size)
+        val booking = bookingRepo.addBooking(
+            Booking(
+                id = 0,
+                eventId = event.id,
+                userId = user.id,
+                bookingDate = Date(),
+                status = BookingStatus.CONFIRMED
+            )
+        )
 
-        testBookingRepositoryImpl.deleteBooking(bookingTest2)
-        assertEquals(1, testBookingRepositoryImpl.bookingList.size)
+        val foundBooking = bookingRepo.getBooking(booking.id)
+        assertAll(
+            { assertEquals(event.id, foundBooking.eventId) },
+            { assertEquals(user.id, foundBooking.userId) },
+            { assertEquals(BookingStatus.CONFIRMED, foundBooking.status) }
+        )
 
-        testBookingRepositoryImpl.deleteBooking(bookingTest3)
-        assertEquals(0, testBookingRepositoryImpl.bookingList.size)
+        bookingRepo.deleteBooking(booking.id)
+        assertThrows<NoSuchElementException> {
+            bookingRepo.getBooking(booking.id)
+        }
     }
 
     @Test
-    @DisplayName("editBooking test")
-    fun editBooking() {
-        testBookingRepositoryImpl.addBooking(bookingTest1)
-        testBookingRepositoryImpl.addBooking(bookingTest2)
-        testBookingRepositoryImpl.addBooking(bookingTest3)
+    fun `update booking status`() {
+        val booking = bookingRepo.addBooking(
+            Booking(
+                id = 0,
+                eventId = createEvent().id,
+                userId = createUser().id,
+                bookingDate = Date(),
+                status = BookingStatus.PENDING
+            )
+        )
 
-        testBookingRepositoryImpl.editBooking(bookingTestEdited)
-        assertEquals(testBookingRepositoryImpl.getBooking(10).userID, USER_ID + 100)
+        val updatedBooking = booking.copy(status = BookingStatus.CANCELLED)
+        bookingRepo.editBooking(updatedBooking)
+
+        assertEquals(BookingStatus.CANCELLED, bookingRepo.getBooking(booking.id).status)
     }
 
     @Test
-    @DisplayName("getBooking test")
-    fun getBooking() {
-        testBookingRepositoryImpl.addBooking(bookingTest1)
-        testBookingRepositoryImpl.addBooking(bookingTest2)
-        testBookingRepositoryImpl.addBooking(bookingTest3)
-
-        assertEquals(bookingTest1, testBookingRepositoryImpl.getBooking(0))
-        assertEquals(bookingTest2, testBookingRepositoryImpl.getBooking(1))
-        assertEquals(bookingTest3, testBookingRepositoryImpl.getBooking(10))
+    fun `fail to create booking with invalid user`() {
+        assertThrows<Exception> {
+            bookingRepo.addBooking(
+                Booking(
+                    id = 0,
+                    eventId = createEvent().id,
+                    userId = 999,
+                    bookingDate = Date(),
+                    status = BookingStatus.CONFIRMED
+                )
+            )
+        }
     }
 
     @Test
-    @DisplayName("getAllBookings test")
-    fun getAllBookings() {
-        testBookingRepositoryImpl.addBooking(bookingTest1)
-        testBookingRepositoryImpl.addBooking(bookingTest2)
-        testBookingRepositoryImpl.addBooking(bookingTest3)
-
-        assertEquals(mutableListOf(bookingTest1, bookingTest2, bookingTest3), testBookingRepositoryImpl.getAllBookings())
-    }
-
-    companion object {
-        private const val EVENT_ID = 10
-        private const val USER_ID = 100
+    fun `fail to create booking with invalid event`() {
+        assertThrows<Exception> {
+            bookingRepo.addBooking(
+                Booking(
+                    id = 0,
+                    eventId = 999,
+                    userId = createUser().id,
+                    bookingDate = Date(),
+                    status = BookingStatus.CONFIRMED
+                )
+            )
+        }
     }
 }

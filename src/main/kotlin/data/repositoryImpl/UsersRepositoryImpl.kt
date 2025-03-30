@@ -1,36 +1,49 @@
 package data.repositoryImpl
 
+import data.db.entities.UserDbModel
+import data.mappers.UserMapper
+import data.mappers.enums.RolesMapper
 import domain.entities.User
 import domain.repository.UsersRepository
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.transaction
 
-class UsersRepositoryImpl(): UsersRepository {
-    var usersList = mutableListOf<User>()
-    private var autoIncrementId = 0
+class UsersRepositoryImpl : UsersRepository {
+    override fun addUser(user: User): User = transaction {
+        val id = UserDbModel.insertAndGetId {
+            it[username] = user.login
+            it[password] = user.password
+            it[email] = user.email
+            it[role] = RolesMapper.fromEnumToDbModel(user.role)
+        }.value
 
-    override fun addUser(user: User) {
-        if (user.id == User.UNDEFINED_ID)
-            user.id = autoIncrementId++
-        usersList.add(user)
+        user.copy(id = id)
     }
 
-    override fun deleteUser(user: User) {
-        val id = usersList.indexOf(user)
-        usersList.removeAt(id)
+    override fun deleteUser(userId: Int) = transaction {
+        UserDbModel.deleteWhere { UserDbModel.id eq userId }
     }
 
-    override fun editUser(user: User) {
-        val oldUser = getUser(user.id)
-        usersList.remove(oldUser)
-        addUser(user)
+    override fun editUser(user: User) = transaction {
+        UserDbModel.update({ UserDbModel.id eq user.id }) {
+            it[username] = user.login
+            it[password] = user.password
+            it[email] = user.email
+            it[role] = RolesMapper.fromEnumToDbModel(user.role)
+        }
     }
 
-    override fun getUser(userId: Int): User {
-        return usersList.find {
-            it.id == userId
-        } ?: throw RuntimeException("Element with id = $userId not found")
+    override fun getUser(userId: Int): User = transaction {
+        UserDbModel.selectAll().where { UserDbModel.id eq userId }
+            .map { row ->
+                UserMapper.fromDbModelToEntity(row)
+            }.firstOrNull() ?: throw NoSuchElementException("User $userId not found")
     }
 
-    override fun getAllUsers(): List<User> {
-        return usersList
+    override fun getAllUsers(): List<User> = transaction {
+        UserDbModel.selectAll().map { row ->
+            UserMapper.fromDbModelToEntity(row)
+        }
     }
 }

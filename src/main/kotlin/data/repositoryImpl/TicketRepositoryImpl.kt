@@ -1,36 +1,47 @@
 package data.repositoryImpl
 
+import data.db.entities.TicketDbModel
+import data.mappers.TicketMapper
+import data.mappers.enums.TicketStatusMapper
 import domain.entities.Ticket
 import domain.repository.TicketRepository
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.transaction
 
-class TicketRepositoryImpl(): TicketRepository {
-    var ticketList = mutableListOf<Ticket>()
-    private var autoIncrementId = 0
+class TicketRepositoryImpl : TicketRepository {
+    override fun addTicket(ticket: Ticket): Ticket = transaction {
+        val id = TicketDbModel.insertAndGetId {
+            it[eventId] = ticket.eventId
+            it[userId] = ticket.userId
+            it[status] = TicketStatusMapper.fromEnumToDbModel(ticket.status)
+        }.value
 
-    override fun addTicket(ticket: Ticket) {
-        if (ticket.id == Ticket.UNDEFINED_ID)
-            ticket.id = autoIncrementId++
-        ticketList.add(ticket)
+        ticket.copy(id = id)
     }
 
-    override fun deleteTicket(ticket: Ticket) {
-        val id = ticketList.indexOf(ticket)
-        ticketList.removeAt(id)
+    override fun deleteTicket(ticketId: Int) = transaction {
+        TicketDbModel.deleteWhere { TicketDbModel.id eq ticketId }
     }
 
-    override fun editTicket(ticket: Ticket) {
-        val oldTicket = getTicket(ticket.id)
-        ticketList.remove(oldTicket)
-        addTicket(ticket)
+    override fun editTicket(ticket: Ticket) = transaction {
+        TicketDbModel.update({ TicketDbModel.id eq ticket.id }) {
+            it[eventId] = ticket.eventId
+            it[userId] = ticket.userId
+            it[status] = TicketStatusMapper.fromEnumToDbModel(ticket.status)
+        }
     }
 
-    override fun getTicket(ticketId: Int): Ticket {
-        return ticketList.find {
-            it.id == ticketId
-        } ?: throw RuntimeException("Element with id = $ticketId not found")
+    override fun getTicket(ticketId: Int): Ticket = transaction {
+        TicketDbModel.select { TicketDbModel.id eq ticketId }
+            .map { row ->
+                TicketMapper.fromDbModelToEntity(row)
+            }.firstOrNull() ?: throw NoSuchElementException("Ticket $ticketId not found")
     }
 
-    override fun getAllTickets(): List<Ticket> {
-        return ticketList
+    override fun getAllTickets(): List<Ticket> = transaction {
+        TicketDbModel.selectAll().map { row ->
+            TicketMapper.fromDbModelToEntity(row)
+        }
     }
 }

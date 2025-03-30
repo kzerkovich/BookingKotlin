@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="1" author="egor_kuznetsov">
+        <!-- Users Table -->
+        <createTable tableName="users">
+            <column name="id" type="INT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(50)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="password" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(100)"/>
+            <column name="role" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Events Table -->
+        <createTable tableName="events">
+            <column name="id" type="INT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="location" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category" type="VARCHAR(50)"/>
+            <column name="available_tickets" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="price" type="DECIMAL(19,2)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Tickets Table -->
+        <createTable tableName="tickets">
+            <column name="id" type="INT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="event_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="INT"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Bookings Table -->
+        <createTable tableName="bookings">
+            <column name="id" type="INT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="event_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="booking_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Foreign Keys -->
+        <addForeignKeyConstraint
+                baseTableName="ticket"
+                baseColumnNames="event_id"
+                referencedTableName="events"
+                referencedColumnNames="id"
+                constraintName="fk_tickets_event"/>
+
+        <addForeignKeyConstraint
+                baseTableName="tickets"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_tickets_user"/>
+
+        <addForeignKeyConstraint
+                baseTableName="bookings"
+                baseColumnNames="event_id"
+                referencedTableName="events"
+                referencedColumnNames="id"
+                constraintName="fk_bookings_event"/>
+
+        <addForeignKeyConstraint
+                baseTableName="bookings"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_bookings_user"/>
+
+    </changeSet>
+
+    <changeSet id="2" author="your_name">
+        <sql>
+            ALTER TABLE users
+            ADD CONSTRAINT chk_users_role
+            CHECK (role IN ('USER', 'ADMIN'));
+
+            ALTER TABLE tickets
+            ADD CONSTRAINT chk_tickets_status
+            CHECK (status IN ('BOOKED', 'PURCHASED', 'AVAILABLE'));
+
+            ALTER TABLE bookings
+            ADD CONSTRAINT chk_bookings_status
+            CHECK (status IN ('ACTIVE', 'CANCELLED', 'COMPLETED'));
+        </sql>
+    </changeSet>
+</databaseChangeLog>

@@ -12,6 +12,10 @@ repositories {
 val exposedVersion: String by project
 dependencies {
     testImplementation(kotlin("test"))
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
+    testImplementation("org.testcontainers:junit-jupiter:1.19.3")
+    testImplementation("org.testcontainers:postgresql:1.19.3")
 
     implementation("io.ktor:ktor-server-core:3.0.0")
     implementation("io.ktor:ktor-client-core:3.0.0")

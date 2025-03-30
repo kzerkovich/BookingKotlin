@@ -4,13 +4,9 @@ import domain.BookingStatus
 import java.util.Date
 
 data class Booking(
-    var id: Int = UNDEFINED_ID,
-    val eventID: Int,
-    val userID: Int,
+    var id: Int,
+    val eventId: Int,
+    val userId: Int,
     val bookingDate: Date,
     val status: BookingStatus = BookingStatus.CANCELLED
-) {
-    companion object {
-        const val UNDEFINED_ID = -1
-    }
-}
+)
