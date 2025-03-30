@@ -110,7 +110,7 @@
 
     </changeSet>
 
-    <changeSet id="2" author="your_name">
+    <changeSet id="2" author="egor_kuznetsov">
         <sql>
             ALTER TABLE users
             ADD CONSTRAINT chk_users_role
