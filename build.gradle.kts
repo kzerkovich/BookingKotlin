@@ -10,6 +10,7 @@ repositories {
 }
 
 val exposedVersion: String by project
+val ktorVersion: String by project
 dependencies {
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:1.9.24")
@@ -18,15 +19,26 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
 
     testImplementation("org.testcontainers:junit-jupiter:1.19.3")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
+
+    testImplementation("org.testcontainers:junit-jupiter:1.19.3")
     testImplementation("org.testcontainers:postgresql:1.19.3")
 
     testImplementation("io.mockk:mockk:1.13.4")
 
-    // Koin (все зависимости должны быть одной версии!)
     implementation("io.insert-koin:koin-core:3.5.0")
     testImplementation("io.insert-koin:koin-test:3.5.0") {
         exclude(group = "org.jetbrains.kotlin", module = "kotlin-test-junit")
     }
+
+    implementation("io.ktor:ktor-server-core:$ktorVersion")
+    implementation("io.ktor:ktor-server-netty:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
+    implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
+    implementation("io.ktor:ktor-server-openapi:$ktorVersion")
+    implementation("io.insert-koin:koin-ktor:3.5.0")
+    implementation("org.valiktor:valiktor-core:0.12.0")
 
 
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")

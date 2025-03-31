@@ -81,13 +81,6 @@
 
         <!-- Foreign Keys -->
         <addForeignKeyConstraint
-                baseTableName="ticket"
-                baseColumnNames="event_id"
-                referencedTableName="events"
-                referencedColumnNames="id"
-                constraintName="fk_tickets_event"/>
-
-        <addForeignKeyConstraint
                 baseTableName="tickets"
                 baseColumnNames="user_id"
                 referencedTableName="users"
@@ -122,7 +115,7 @@
 
             ALTER TABLE bookings
             ADD CONSTRAINT chk_bookings_status
-            CHECK (status IN ('ACTIVE', 'CANCELLED', 'COMPLETED'));
+            CHECK (status IN ('PENDING', 'CONFIRMED', 'CANCELLED'));
         </sql>
     </changeSet>
 </databaseChangeLog>
