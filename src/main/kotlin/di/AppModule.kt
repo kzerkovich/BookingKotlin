@@ -13,6 +13,11 @@ val appModule = module {
     single<UsersRepository> { UsersRepositoryImpl() }
     single<TicketRepository> { TicketRepositoryImpl() }
 
+    single { BookingService(get(), get(), get()) }
+    single { EventService(get(), get(), get(), get()) }
+    single { UserService(get()) }
+    single { TicketService(get(), get(), get()) }
+    single { NotificationService() }
 
     single { BookingController(get()) }
     single { EventController(get()) }

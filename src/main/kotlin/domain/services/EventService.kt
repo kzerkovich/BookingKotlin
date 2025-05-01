@@ -44,6 +44,8 @@ class EventService(
         return eventRepository.getAllEvents().filter { it.location == location }
     }
 
+    fun getAllEvents(): List<Event> = eventRepository.getAllEvents()
+
     fun getFilteredEvents(
         location: String? = null,
         category: String? = null,

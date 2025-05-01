@@ -1,15 +1,92 @@
 package api.controllers
 
+import api.dto.BanStatusResponse
+import api.dto.CreateUserRequest
+import api.dto.UpdateUserRequest
+import api.dto.UserResponse
 import domain.Roles
-import domain.entities.User
 import domain.services.UserService
-import io.ktor.server.application.*
+import io.ktor.http.*
+import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.valiktor.validate
-import org.valiktor.functions.*
 
 class UserController(private val userService: UserService) {
 
+    fun Route.registerRoutes() {
+        route("/users") {
+
+            post {
+                val request = call.receive<CreateUserRequest>()
+                request.validate()
+
+                val user = request.toEntity()
+                val createdUser = userService.registerUser(user)
+                call.respond(HttpStatusCode.Created, UserResponse(createdUser))
+            }
+
+            get("/{id}") {
+                val userId = call.parameters["id"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid user ID")
+
+                val user = userService.getUser(userId)
+                call.respond(UserResponse(user))
+            }
+
+            put("/{id}") {
+                val userId = call.parameters["id"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid user ID")
+
+                val request = call.receive<UpdateUserRequest>()
+                request.validate()
+
+                val existingUser = userService.getUser(userId)
+                val updatedUser = userService.updateUser(request.applyTo(existingUser))
+                call.respond(UserResponse(updatedUser))
+            }
+
+            authenticate("admin-auth") {
+                delete("/{id}") {
+                    val userId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid user ID")
+
+                    userService.deleteUser(userId)
+                    call.respond(HttpStatusCode.NoContent)
+                }
+            }
+
+            authenticate("admin-auth") {
+                get("/role/{role}") {
+                    val role = call.parameters["role"]?.let { Roles.valueOf(it.uppercase()) }
+                        ?: throw IllegalArgumentException("Invalid role")
+
+                    val users = userService.getUsersByRole(role)
+                        .map { UserResponse(it) }
+                    call.respond(users)
+                }
+            }
+
+            post("/{id}/notifications") {
+                val userId = call.parameters["id"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid user ID")
+
+                val enabled = call.request.queryParameters["enabled"]?.toBoolean()
+                    ?: throw IllegalArgumentException("Enabled flag is required")
+
+                val user = userService.toggleNotifications(userId, enabled)
+                call.respond(UserResponse(user))
+            }
+
+            get("/{id}/ban-status") {
+                val userId = call.parameters["id"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Некорректный ID пользователя")
+
+                val isBanned = userService.checkUserBan(userId)
+                val bannedUntil = userService.getUser(userId).bannedUntil?.time
+
+                call.respond(BanStatusResponse(isBanned, bannedUntil))
+            }
+        }
+    }
 }

@@ -40,6 +40,7 @@ dependencies {
     implementation("io.ktor:ktor-server-openapi:$ktorVersion")
     implementation("io.insert-koin:koin-ktor:3.5.0")
     implementation("org.valiktor:valiktor-core:0.12.0")
+    implementation(kotlin("reflect"))
 
     implementation("io.ktor:ktor-server-auth:$ktorVersion")
     implementation("io.ktor:ktor-server-auth-jwt:$ktorVersion")
@@ -58,8 +59,15 @@ dependencies {
 
     implementation("org.liquibase:liquibase-core:4.31.1")
 
-implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
+    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
+    testImplementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-gson:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    implementation("io.ktor:ktor-serialization-jackson:$ktorVersion")
 }
 
 tasks.test {

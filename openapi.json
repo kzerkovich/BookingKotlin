@@ -2,7 +2,7 @@
   "openapi": "3.0.2",
   "info": {
     "title": "Booking API",
-    "version": "1.0",
+    "version": "2.0",
     "description": "API для управления событиями, бронированиями, пользователями и билетами"
   },
   "servers": [
@@ -20,22 +20,150 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/User" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
             }
           }
         },
         "responses": {
-          "201": { "description": "Пользователь создан" },
-          "400": { "description": "Некорректные данные" }
+          "201": {
+            "description": "Пользователь создан",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некорректные данные",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "Некорректные данные" }
+                  }
+                }
+              }
+            }
+          }
         }
-      },
+      }
+    },
+    "/users/{id}": {
       "get": {
         "tags": ["Users"],
-        "summary": "Получить всех пользователей",
+        "summary": "Получить пользователя по ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Данные пользователя",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Пользователь не найден",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "Пользователь не найден" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Users"],
+        "summary": "Обновить данные пользователя",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Данные обновлены",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Нет прав на изменение роли",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "Доступ запрещен" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Удалить пользователя (требуется админ)",
+        "security": [{"admin-auth": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Пользователь удалён" }
+        }
+      }
+    },
+    "/users/role/{role}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Получить пользователей по роли (требуется админ)",
+        "security": [{"admin-auth": []}],
         "parameters": [
           {
             "name": "role",
-            "in": "query",
+            "in": "path",
+            "required": true,
             "schema": {
               "type": "string",
               "enum": ["USER", "ADMIN"]
@@ -47,20 +175,57 @@
             "description": "Список пользователей",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/User" } }
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponse"
+                  }
+                }
               }
             }
           }
         }
       }
     },
-    "/users/{userId}": {
-      "get": {
+    "/users/{id}/notifications": {
+      "post": {
         "tags": ["Users"],
-        "summary": "Получить пользователя по ID",
+        "summary": "Переключить уведомления",
         "parameters": [
           {
-            "name": "userId",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Статус уведомлений изменён",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/ban-status": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Проверить блокировку пользователя",
+        "parameters": [
+          {
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": { "type": "integer" }
@@ -68,106 +233,318 @@
         ],
         "responses": {
           "200": {
-            "description": "Данные пользователя",
+            "description": "Статус блокировки",
             "content": {
-              "application/json": { "$ref": "#/components/schemas/User" }
-            }
-          },
-          "404": { "description": "Пользователь не найден" }
-        }
-      },
-      "put": {
-        "tags": ["Users"],
-        "summary": "Обновить данные пользователя",
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer" }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/User" }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BanStatusResponse"
+                }
+              }
             }
           }
-        },
-        "responses": {
-          "200": { "description": "Данные обновлены" },
-          "403": { "description": "Нет прав на изменение роли" }
-        }
-      },
-      "delete": {
-        "tags": ["Users"],
-        "summary": "Удалить пользователя",
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer" }
-          }
-        ],
-        "responses": {
-          "204": { "description": "Пользователь удалён" }
         }
       }
     },
     "/events": {
       "post": {
         "tags": ["Events"],
-        "summary": "Создать событие",
+        "summary": "Создать мероприятие",
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/Event" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventRequest"
+              }
             }
           }
         },
         "responses": {
-          "201": { "description": "Событие создано" },
-          "400": { "description": "Дата в прошлом или некорректные билеты" }
+          "201": {
+            "description": "Мероприятие создано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Дата в прошлом или некорректные билеты",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "Некорректные данные" }
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "get": {
         "tags": ["Events"],
-        "summary": "Получить события (с фильтром по локации)",
-        "parameters": [
-          {
-            "name": "location",
-            "in": "query",
-            "schema": { "type": "string" }
-          }
-        ],
+        "summary": "Получить все мероприятия",
         "responses": {
           "200": {
-            "description": "Список событий",
+            "description": "Список мероприятий",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Event" } }
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventResponse"
+                  }
+                }
               }
             }
           }
         }
       }
     },
-    "/events/{eventId}": {
-      "delete": {
+    "/events/{id}": {
+      "get": {
         "tags": ["Events"],
-        "summary": "Удалить событие",
+        "summary": "Получить мероприятие по ID",
         "parameters": [
           {
-            "name": "eventId",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": { "type": "integer" }
           }
         ],
         "responses": {
-          "204": { "description": "Событие удалено" },
+          "200": {
+            "description": "Данные мероприятия",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Мероприятие не найдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "Мероприятие не найдено" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Events"],
+        "summary": "Обновить мероприятие",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEventRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Мероприятие обновлено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Events"],
+        "summary": "Удалить мероприятие",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Мероприятие удалено" },
           "409": { "description": "Есть активные бронирования" }
+        }
+      }
+    },
+    "/events/location/{location}": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Получить мероприятия по локации",
+        "parameters": [
+          {
+            "name": "location",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список мероприятий",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/filter": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Фильтрация мероприятий",
+        "parameters": [
+          {
+            "name": "location",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список мероприятий",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/{id}/tickets": {
+      "put": {
+        "tags": ["Events"],
+        "summary": "Обновить количество билетов (требуется админ)",
+        "security": [{"admin-auth": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "total",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Количество билетов обновлено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/{id}/cancel": {
+      "post": {
+        "tags": ["Events"],
+        "summary": "Отменить мероприятие (требуется админ)",
+        "security": [{"admin-auth": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Мероприятие отменено" }
+        }
+      }
+    },
+    "/events/{id}/price": {
+      "put": {
+        "tags": ["Events"],
+        "summary": "Обновить цену мероприятия (требуется админ)",
+        "security": [{"admin-auth": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "price",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "number" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Цена обновлена",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -178,18 +555,41 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/Booking" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookingRequest"
+              }
             }
           }
         },
         "responses": {
-          "201": { "description": "Бронирование создано" },
-          "400": { "description": "Нет доступных билетов" }
+          "201": {
+            "description": "Бронирование создано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нет доступных билетов",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "Нет доступных билетов" }
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "get": {
         "tags": ["Bookings"],
-        "summary": "Получить все бронирования пользователя",
+        "summary": "Получить бронирования пользователя",
         "parameters": [
           {
             "name": "userId",
@@ -203,39 +603,114 @@
             "description": "Список бронирований",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Booking" } }
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  }
+                }
               }
             }
           }
         }
       }
     },
-    "/bookings/{bookingId}": {
+    "/bookings/{id}/confirm": {
+      "put": {
+        "tags": ["Bookings"],
+        "summary": "Подтвердить бронирование",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBookingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Бронирование подтверждено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bookings/{id}": {
       "delete": {
         "tags": ["Bookings"],
         "summary": "Отменить бронирование",
         "parameters": [
           {
-            "name": "bookingId",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": { "type": "integer" }
           }
         ],
         "responses": {
-          "204": { "description": "Бронирование отменено" },
-          "400": { "description": "Бронирование уже отменено" }
+          "204": { "description": "Бронирование отменено" }
+        }
+      }
+    },
+    "/bookings/check-expired": {
+      "post": {
+        "tags": ["Bookings"],
+        "summary": "Проверить просроченные бронирования",
+        "responses": {
+          "200": { "description": "Просроченные бронирования обработаны" }
         }
       }
     },
     "/tickets": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Создать билет",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Билет создан",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tickets/event/{eventId}": {
       "get": {
         "tags": ["Tickets"],
         "summary": "Получить билеты по событию",
         "parameters": [
           {
             "name": "eventId",
-            "in": "query",
+            "in": "path",
             "required": true,
             "schema": { "type": "integer" }
           }
@@ -245,7 +720,118 @@
             "description": "Список билетов",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Ticket" } }
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TicketResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tickets/{id}/status": {
+      "put": {
+        "tags": ["Tickets"],
+        "summary": "Обновить статус билета",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["AVAILABLE", "PURCHASED", "BOOKED"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Статус обновлён",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tickets/{id}": {
+      "delete": {
+        "tags": ["Tickets"],
+        "summary": "Удалить билет",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Билет удалён" }
+        }
+      }
+    },
+    "/tickets/purchase/{bookingId}": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Купить билеты по бронированию",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseTicketsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Билеты куплены",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TicketResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ошибка оплаты",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Недостаточно средств"
+                    }
+                  }
+                }
               }
             }
           }
@@ -255,57 +841,159 @@
   },
   "components": {
     "schemas": {
-      "User": {
+      "CreateUserRequest": {
         "type": "object",
-        "required": ["login", "password", "email"],
+        "required": ["name", "email", "password"],
         "properties": {
-          "id": { "type": "integer", "example": 1 },
-          "login": { "type": "string", "minLength": 3, "maxLength": 20, "example": "user123" },
-          "password": { "type": "string", "minLength": 8, "example": "securePassword" },
+          "name": { "type": "string", "example": "Иван Иванов" },
           "email": { "type": "string", "format": "email", "example": "user@example.com" },
-          "role": { "type": "string", "enum": ["USER", "ADMIN"], "default": "USER" }
+          "password": { "type": "string", "minLength": 6, "example": "secret123" },
+          "role": {
+            "type": "string",
+            "enum": ["USER", "ADMIN"],
+            "default": "USER"
+          }
         }
       },
-      "Event": {
+      "UserResponse": {
         "type": "object",
-        "required": ["name", "date", "location", "availableTickets", "price"],
         "properties": {
           "id": { "type": "integer", "example": 1 },
-          "name": { "type": "string", "example": "Концерт" },
-          "date": { "type": "string", "format": "date-time", "example": "2024-05-20T18:00:00Z" },
+          "name": { "type": "string", "example": "Иван Иванов" },
+          "email": { "type": "string", "example": "user@example.com" },
+          "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+          "notificationsEnabled": { "type": "boolean", "example": true },
+          "isBanned": { "type": "boolean", "example": false }
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Новое имя" },
+          "email": { "type": "string", "format": "email", "example": "new@example.com" },
+          "password": { "type": "string", "minLength": 6, "example": "newpassword" }
+        }
+      },
+      "BanStatusResponse": {
+        "type": "object",
+        "properties": {
+          "isBanned": { "type": "boolean", "example": false },
+          "reason": { "type": "string", "nullable": true, "example": "Нарушение правил" }
+        }
+      },
+      "CreateEventRequest": {
+        "type": "object",
+        "required": ["title", "date", "location"],
+        "properties": {
+          "title": { "type": "string", "example": "Концерт" },
+          "description": { "type": "string", "example": "Описание мероприятия" },
+          "date": { "type": "integer", "example": 1678905600000 },
           "location": { "type": "string", "example": "Москва" },
           "category": { "type": "string", "example": "Музыка" },
-          "availableTickets": { "type": "integer", "minimum": 0, "example": 100 },
-          "price": { "type": "number", "minimum": 0, "example": 1500.50 }
+          "price": { "type": "number", "minimum": 0, "example": 1000 },
+          "ticketsTotal": { "type": "integer", "minimum": 1, "example": 100 }
         }
       },
-      "Booking": {
+      "EventResponse": {
         "type": "object",
-        "required": ["eventId", "userId", "bookingDate"],
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "title": { "type": "string", "example": "Концерт" },
+          "description": { "type": "string", "nullable": true },
+          "date": { "type": "integer", "example": 1678905600000 },
+          "location": { "type": "string", "example": "Москва" },
+          "category": { "type": "string", "nullable": true },
+          "price": { "type": "number", "example": 1000 },
+          "ticketsAvailable": { "type": "integer", "example": 50 },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "CANCELLED"],
+            "default": "ACTIVE"
+          }
+        }
+      },
+      "UpdateEventRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "example": "Новое название" },
+          "description": { "type": "string", "nullable": true },
+          "date": { "type": "integer", "example": 1678905600000 },
+          "location": { "type": "string", "example": "Санкт-Петербург" }
+        }
+      },
+      "CreateBookingRequest": {
+        "type": "object",
+        "required": ["eventId", "ticketsCount"],
+        "properties": {
+          "eventId": { "type": "integer", "example": 1 },
+          "ticketsCount": { "type": "integer", "minimum": 1, "example": 2 }
+        }
+      },
+      "BookingResponse": {
+        "type": "object",
         "properties": {
           "id": { "type": "integer", "example": 1 },
           "eventId": { "type": "integer", "example": 1 },
           "userId": { "type": "integer", "example": 1 },
-          "bookingDate": { "type": "string", "format": "date-time", "example": "2024-05-20T10:00:00Z" },
-          "status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "CANCELLED"], "default": "CANCELLED" }
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "CONFIRMED", "EXPIRED"],
+            "example": "PENDING"
+          },
+          "createdAt": { "type": "integer", "example": 1678905600000 },
+          "tickets": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TicketResponse" }
+          }
         }
       },
-      "Ticket": {
+      "ConfirmBookingRequest": {
+        "type": "object",
+        "required": ["confirmationCode"],
+        "properties": {
+          "confirmationCode": { "type": "string", "example": "ABC123" }
+        }
+      },
+      "PurchaseTicketsRequest": {
+        "type": "object",
+        "required": ["paymentData"],
+        "properties": {
+          "paymentData": {
+            "type": "string",
+            "example": "card_123"
+          }
+        }
+      },
+      "CreateTicketRequest": {
         "type": "object",
         "required": ["eventId", "userId"],
         "properties": {
+          "eventId": { "type": "integer", "example": 1 },
+          "userId": { "type": "integer", "example": 1 },
+          "bookingId": { "type": "integer", "nullable": true, "example": 1 }
+        }
+      },
+      "TicketResponse": {
+        "type": "object",
+        "properties": {
           "id": { "type": "integer", "example": 1 },
           "eventId": { "type": "integer", "example": 1 },
           "userId": { "type": "integer", "example": 1 },
-          "status": { "type": "string", "enum": ["AVAILABLE", "PURCHASED", "BOOKED"], "default": "AVAILABLE" }
+          "bookingId": { "type": "integer", "nullable": true, "example": 1 },
+          "status": {
+            "type": "string",
+            "enum": ["AVAILABLE", "PURCHASED", "BOOKED"],
+            "example": "PURCHASED"
+          },
+          "purchaseDate": { "type": "integer", "nullable": true, "example": 1678905600000 }
         }
       }
     },
     "securitySchemes": {
-      "BearerAuth": {
+      "admin-auth": {
         "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "scheme": "basic",
+        "description": "Basic auth для администраторов"
       }
     }
   }

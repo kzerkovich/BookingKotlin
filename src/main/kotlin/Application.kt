@@ -1,12 +1,15 @@
+import api.auth.UserPrincipal
 import api.controllers.BookingController
 import api.controllers.EventController
 import api.controllers.TicketController
 import api.controllers.UserController
 import data.db.DatabaseFactory
 import di.appModule
+import domain.Roles
 import exception.configureExceptionHandling
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
@@ -22,6 +25,19 @@ fun main() {
 }
 
 fun Application.module() {
+    install(Authentication) {
+        basic("admin-auth") {
+            realm = "Admin Access"
+            validate { credentials ->
+                if (credentials.name == "admin" && credentials.password == "admin") {
+                    UserPrincipal(role = Roles.ADMIN)
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
     install(Koin) {
         modules(appModule)
     }
@@ -37,12 +53,17 @@ fun Application.module() {
         openAPI(path="/", swaggerFile = "openapi.json")
     }
 
+    configureExceptionHandling()
+
     val bookingController by inject<BookingController>()
     val eventController by inject<EventController>()
     val userController by inject<UserController>()
     val ticketController by inject<TicketController>()
 
-
-
-    configureExceptionHandling()
+    routing {
+        bookingController.apply { registerRoutes() }
+        eventController.apply{ registerRoutes() }
+        userController.apply{ registerRoutes() }
+        ticketController.apply { registerRoutes() }
+    }
 }

@@ -11,37 +11,38 @@ class ValidationException(message: String) : RuntimeException(message)
 
 fun Application.configureExceptionHandling() {
     install(StatusPages) {
+        // Кастомные исключения
         exception<NotFoundException> { call, cause ->
-            call.respond(
-                HttpStatusCode.NotFound,
-                mapOf("error" to (cause.message ?: "Ресурс не найден"))
-            )
+            call.respond(HttpStatusCode.NotFound, mapOf("error" to (cause.message ?: "Ресурс не найден")))
         }
 
         exception<ValidationException> { call, cause ->
-            call.respond(
-                HttpStatusCode.BadRequest,
-                mapOf("error" to (cause.message ?: "Некорректные данные"))
-            )
+            call.respond(HttpStatusCode.BadRequest, mapOf("error" to (cause.message ?: "Некорректные данные")))
         }
 
-        exception<Throwable> { call, cause ->
-            call.respond(
-                HttpStatusCode.InternalServerError,
-                mapOf("error" to "Внутренняя ошибка сервера")
-            )
-            throw cause
+        // Стандартные исключения
+        exception<IllegalArgumentException> { call, cause ->
+            call.respond(HttpStatusCode.BadRequest, mapOf("error" to (cause.message ?: "Ошибка валидации")))
         }
 
-
-        exception<AuthenticationException> { call, cause ->
-            call.respond(HttpStatusCode.Unauthorized, mapOf("Отказано в доступе (ошибка авторизации)" to cause.message))
+        exception<NoSuchElementException> { call, _ ->
+            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Ресурс не найден"))
         }
 
         exception<AccessDeniedException> { call, cause ->
-            call.respond(HttpStatusCode.Forbidden, mapOf("Отказано в доступе" to cause.message))
+            call.respond(HttpStatusCode.Forbidden, mapOf("error" to (cause.message ?: "Доступ запрещен")))
         }
 
+        exception<AuthenticationException> { call, cause ->
+            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to (cause.message ?: "Ошибка авторизации")))
+        }
 
+        // Остальные ошибки
+        exception<Throwable> { call, cause ->
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                mapOf("error" to "Внутренняя ошибка сервера: ${cause.message}")
+            )
+        }
     }
 }
