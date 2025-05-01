@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="1" author="egor_kuznetsov">
+        <addColumn tableName="bookings">
+            <column name="tickets_count" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expiration_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        
+        <addColumn tableName="events">
+            <column name="description" type="TEXT"/>
+            <column name="total_tickets" type="INT"/>
+            <column name="is_cancelled" type="BOOLEAN" defaultValue="false"/>
+        </addColumn>
+        
+        <addColumn tableName="tickets">
+            <column name="booking_id" type="INT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="purchase_date" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        
+        <addColumn tableName="users">
+            <column name="banned_until" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

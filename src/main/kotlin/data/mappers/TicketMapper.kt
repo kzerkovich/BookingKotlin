@@ -11,14 +11,17 @@ object TicketMapper {
         id = row[TicketDbModel.id].value,
         eventId = row[TicketDbModel.eventId],
         userId = row[TicketDbModel.userId],
-        status = TicketStatusMapper.fromDbModelToEnum(row[TicketDbModel.status])
+        bookingId = row[TicketDbModel.bookingId],
+        status = TicketStatusMapper.fromDbModelToEnum(row[TicketDbModel.status]),
+        purchaseDate = row[TicketDbModel.purchaseDate]?.let { Converter.convertTimestampToDate(it) }
     )
 
     fun fromEntityToDbModel(ticket: Ticket): TicketDbModel.(InsertStatement<Number>) -> Unit = {
-        TODO("The mapper from the application to the database is not working, most likely, the function signature" +
-                " is incorrect")
-//        it[eventId] = ticket.eventId
-//        it[userId] = ticket.userId
-//        it[status] = TicketStatusMapper.fromEnumToDbModel(ticket.status)
+        /*it[eventId] = ticket.eventId
+        it[userId] = ticket.userId
+        it[bookingId] = ticket.bookingId
+        it[status] = TicketStatusMapper.fromEnumToDbModel(ticket.status)
+        it[purchaseDate] = ticket.purchaseDate?.let { Converter.convertDateToTimestamp(it) }
+         */
     }
 }

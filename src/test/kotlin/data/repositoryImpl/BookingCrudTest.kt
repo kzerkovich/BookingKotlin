@@ -1,6 +1,5 @@
 package data.repositoryImpl
 
-import BaseCrudTest
 import domain.BookingStatus
 import domain.Roles
 import domain.entities.Booking
@@ -21,12 +20,15 @@ class BookingCrudTest : BaseCrudTest() {
         return eventRepo.addEvent(
             Event(
                 id = 0,
-                name = "Tech Conference",
-                date = Date(System.currentTimeMillis() + 172800000),
-                location = "Convention Center",
-                category = "Technology",
-                availableTickets = 200,
-                price = 299.99
+                name = "Test Event ${UUID.randomUUID()}",
+                description = "Test Description",
+                date = Date(System.currentTimeMillis() + 86400000),
+                location = "Test Location",
+                category = "Music",
+                totalTickets = 200,
+                availableTickets = 100,
+                price = 50.00,
+                isCancelled = false
             )
         )
     }
@@ -53,16 +55,17 @@ class BookingCrudTest : BaseCrudTest() {
                 id = 0,
                 eventId = event.id,
                 userId = user.id,
+                ticketsCount = 2,
                 bookingDate = Date(),
-                status = BookingStatus.CONFIRMED
+                expirationDate = Date(System.currentTimeMillis() + 30 * 60 * 1000),
+                status = BookingStatus.PENDING
             )
         )
-
         val foundBooking = bookingRepo.getBooking(booking.id)
         assertAll(
             { assertEquals(event.id, foundBooking.eventId) },
             { assertEquals(user.id, foundBooking.userId) },
-            { assertEquals(BookingStatus.CONFIRMED, foundBooking.status) }
+            { assertEquals(BookingStatus.PENDING, foundBooking.status) }
         )
 
         bookingRepo.deleteBooking(booking.id)
@@ -78,11 +81,12 @@ class BookingCrudTest : BaseCrudTest() {
                 id = 0,
                 eventId = createEvent().id,
                 userId = createUser().id,
+                ticketsCount = 1,
                 bookingDate = Date(),
+                expirationDate = Date(System.currentTimeMillis() + 30 * 60 * 1000), // Добавлено
                 status = BookingStatus.PENDING
             )
         )
-
         val updatedBooking = booking.copy(status = BookingStatus.CANCELLED)
         bookingRepo.editBooking(updatedBooking)
 
@@ -96,9 +100,11 @@ class BookingCrudTest : BaseCrudTest() {
                 Booking(
                     id = 0,
                     eventId = createEvent().id,
-                    userId = 999,
+                    userId = 0,
+                    ticketsCount = 999,
                     bookingDate = Date(),
-                    status = BookingStatus.CONFIRMED
+                    expirationDate = Date(System.currentTimeMillis() + 30 * 60 * 1000),
+                    status = BookingStatus.PENDING
                 )
             )
         }
@@ -112,8 +118,10 @@ class BookingCrudTest : BaseCrudTest() {
                     id = 0,
                     eventId = 999,
                     userId = createUser().id,
+                    ticketsCount = 1,
                     bookingDate = Date(),
-                    status = BookingStatus.CONFIRMED
+                    expirationDate = Date(System.currentTimeMillis() + 30 * 60 * 1000), // Добавлено
+                    status = BookingStatus.PENDING
                 )
             )
         }

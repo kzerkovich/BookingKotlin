@@ -1,6 +1,5 @@
 package data.repositoryImpl
 
-import BaseCrudTest
 import domain.Roles
 import domain.entities.User
 import org.junit.jupiter.api.Test

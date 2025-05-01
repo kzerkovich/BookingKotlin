@@ -6,4 +6,5 @@
                         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
 
     <include file="V1__create_tables.xml" relativeToChangelogFile="true"/>
+    <include file="V2__add_columns.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

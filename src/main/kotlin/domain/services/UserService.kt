@@ -1,18 +1,23 @@
-package domain.usecases
+package domain.services
 
 import domain.Roles
 import domain.entities.User
 import domain.repository.UsersRepository
 import java.nio.file.AccessDeniedException
 
-class UserUseCase(
+class UserService(
     private val userRepository: UsersRepository
 ) {
     fun registerUser(user: User): User {
-        if (userRepository.getAllUsers().any { it.login == user.login }) {
-            throw IllegalArgumentException("Login already exists")
+        return try {
+            if (userRepository.getAllUsers().any { it.login == user.login }) {
+                throw IllegalArgumentException("Login already exists")
+            }
+            userRepository.addUser(user)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw e
         }
-        return userRepository.addUser(user)
     }
 
     fun updateUser(user: User): User {
@@ -32,5 +37,16 @@ class UserUseCase(
 
     fun getUsersByRole(role: Roles): List<User> {
         return userRepository.getAllUsers().filter { it.role == role }
+    }
+
+    fun toggleNotifications(userId: Int, enabled: Boolean): User {
+        val user = userRepository.getUser(userId)
+        user.notificationEnabled = enabled
+        userRepository.editUser(user)
+        return user
+    }
+
+    fun checkUserBan(userId: Int): Boolean {
+        return userRepository.isUserBanned(userId)
     }
 }

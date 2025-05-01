@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
+import javax.security.sasl.AuthenticationException
 
 class NotFoundException(message: String) : RuntimeException(message)
 class ValidationException(message: String) : RuntimeException(message)
@@ -31,5 +32,16 @@ fun Application.configureExceptionHandling() {
             )
             throw cause
         }
+
+
+        exception<AuthenticationException> { call, cause ->
+            call.respond(HttpStatusCode.Unauthorized, mapOf("Отказано в доступе (ошибка авторизации)" to cause.message))
+        }
+
+        exception<AccessDeniedException> { call, cause ->
+            call.respond(HttpStatusCode.Forbidden, mapOf("Отказано в доступе" to cause.message))
+        }
+
+
     }
 }

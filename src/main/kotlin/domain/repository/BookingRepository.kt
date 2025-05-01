@@ -1,5 +1,6 @@
 package domain.repository
 
+import domain.BookingStatus
 import domain.entities.Booking
 
 interface BookingRepository {
@@ -12,4 +13,8 @@ interface BookingRepository {
     fun getBooking(bookingId: Int): Booking
 
     fun getAllBookings(): List<Booking>
+
+    fun findActiveBookingsByUserAndEvent(userId: Int, eventId: Int): List<Booking>
+
+    fun findAllByStatus(status: BookingStatus): List<Booking>
 }

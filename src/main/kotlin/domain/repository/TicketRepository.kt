@@ -1,5 +1,6 @@
 package domain.repository
 
+import domain.TicketStatus
 import domain.entities.Ticket
 
 interface TicketRepository {
@@ -12,4 +13,8 @@ interface TicketRepository {
     fun getTicket(ticketId: Int): Ticket
 
     fun getAllTickets(): List<Ticket>
+
+    fun getTicketsByBooking(bookingId: Int): List<Ticket>
+
+    fun updateTicketsStatus(bookingId: Int, status: TicketStatus): Int
 }

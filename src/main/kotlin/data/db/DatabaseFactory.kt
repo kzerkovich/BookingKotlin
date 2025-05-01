@@ -9,6 +9,15 @@ import java.sql.DriverManager
 
 object DatabaseFactory {
     fun init() {
+        Database.connect(
+            url = "jdbc:postgresql://localhost:5432/booking_db",
+            driver = "org.postgresql.Driver",
+            user = "booking_user",
+            password = "booking_pass"
+        )
+
+        createDatabaseIfNotExists()
+
         val connection = DriverManager.getConnection(
             "jdbc:postgresql://localhost:5432/booking_db",
             "booking_user",
@@ -25,13 +34,31 @@ object DatabaseFactory {
         )
 
         liquibase.update()
+    }
 
-        connection.close()
-
-        Database.connect(
-            url = "jdbc:postgresql://localhost:5432/booking_db",
-            user = "booking_user",
-            password = "booking_pass"
+    private fun createDatabaseIfNotExists() {
+        val adminConnection = DriverManager.getConnection(
+            "jdbc:postgresql://localhost:5432/postgres",
+            "postgres",
+            "password"
         )
+
+        adminConnection.use { conn ->
+            val resultSet = conn.createStatement().executeQuery(
+                "SELECT 1 FROM pg_database WHERE datname = 'booking_db'"
+            )
+
+            if (!resultSet.next()) {
+                conn.createStatement().execute(
+                    """
+                CREATE DATABASE booking_db 
+                WITH OWNER = booking_user 
+                ENCODING = 'UTF8'
+                """
+                )
+            }
+        }
+
+        adminConnection.close()
     }
 }

@@ -1,6 +1,5 @@
 package data.repositoryImpl
 
-import BaseCrudTest
 import domain.Roles
 import domain.TicketStatus
 import domain.entities.Event
@@ -30,12 +29,15 @@ class TicketCrudTest : BaseCrudTest() {
         return eventRepo.addEvent(
             Event(
                 id = 0,
-                name = "Rock Festival",
-                date = Date(System.currentTimeMillis() + 86400000), // Завтра
-                location = "Stadium",
+                name = "Test Event ${UUID.randomUUID()}",
+                description = "Test Description",
+                date = Date(System.currentTimeMillis() + 86400000),
+                location = "Test Location",
                 category = "Music",
-                availableTickets = 500,
-                price = 99.99
+                totalTickets = 200,
+                availableTickets = 100,
+                price = 50.00,
+                isCancelled = false
             )
         )
     }

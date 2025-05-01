@@ -5,9 +5,12 @@ import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 
 object EventDbModel : IntIdTable("events") {
     val name = varchar("name", 100)
+    val description = text("description")
     val date = timestamp("date")
     val location = varchar("location", 200)
     val category = varchar("category", 50)
+    val totalTickets = integer("total_tickets")
     val availableTickets = integer("available_tickets")
     val price = decimal("price", 19, 2)
+    val isCancelled = bool("is_cancelled").default(false)
 }

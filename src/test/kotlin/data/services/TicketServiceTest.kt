@@ -1,11 +1,12 @@
-package data.usecases
+package data.services
 
 import domain.entities.Ticket
 import domain.TicketStatus
 import domain.entities.Event
+import domain.repository.BookingRepository
 import domain.repository.EventRepository
 import domain.repository.TicketRepository
-import domain.usecases.TicketUseCase
+import domain.services.TicketService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -18,20 +19,21 @@ import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import java.util.*
 
-class TicketUseCaseTest {
+class TicketServiceTest {
     private val ticketRepository = mockk<TicketRepository>()
     private val eventRepository = mockk<EventRepository>()
-    private lateinit var ticketService: TicketUseCase
+    private val bookingRepository = mockk<BookingRepository>()
+    private lateinit var ticketService: TicketService
 
     @BeforeEach
     fun setup() {
         val testModule = module {
             single { ticketRepository }
             single { eventRepository }
-            single { TicketUseCase(get(), get()) }
+            single { TicketService(get(), get(), get()) }
         }
         startKoin { modules(testModule) }
-        ticketService = TicketUseCase(ticketRepository, eventRepository)
+        ticketService = TicketService(ticketRepository, eventRepository, bookingRepository)
     }
 
     @Test
@@ -41,11 +43,13 @@ class TicketUseCaseTest {
         val mockEvent = Event(
             id = eventId,
             name = "Test Event",
+            description = "Test",
             date = Date(),
             location = "Test Location",
             category = "Test Category",
             availableTickets = 0,
-            price = 100.0
+            price = 100.0,
+            totalTickets = 100
         )
 
         every { eventRepository.getEvent(eventId) } returns mockEvent

@@ -1,9 +1,9 @@
-package data.usecases
+package data.services
 
 import domain.entities.User
 import domain.Roles
 import domain.repository.UsersRepository
-import domain.usecases.UserUseCase
+import domain.services.UserService
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
@@ -15,18 +15,18 @@ import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import java.nio.file.AccessDeniedException
 
-class UserUseCaseTest {
+class UserServiceTest {
     private val userRepository = mockk<UsersRepository>()
-    private lateinit var userService: UserUseCase
+    private lateinit var userService: UserService
 
     @BeforeEach
     fun setup() {
         val testModule = module {
             single { userRepository }
-            single { UserUseCase(get()) }
+            single { UserService(get()) }
         }
         startKoin { modules(testModule) }
-        userService = UserUseCase(userRepository)
+        userService = UserService(userRepository)
     }
 
     @Test

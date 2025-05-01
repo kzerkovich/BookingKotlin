@@ -1,6 +1,5 @@
 package data.repositoryImpl
 
-import BaseCrudTest
 import domain.entities.Event
 import org.junit.jupiter.api.Assertions.assertAll
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -15,11 +14,14 @@ class EventCrudTest : BaseCrudTest() {
         return Event(
             id = 0,
             name = "Test Event ${UUID.randomUUID()}",
-            date = Date(System.currentTimeMillis() + 86400000), // Завтра
+            description = "Test Description",
+            date = Date(System.currentTimeMillis() + 86400000),
             location = "Test Location",
             category = "Music",
+            totalTickets = 200,
             availableTickets = 100,
-            price = 50.00
+            price = 50.00,
+            isCancelled = false
         )
     }
 
@@ -66,5 +68,11 @@ class EventCrudTest : BaseCrudTest() {
         }
     }
 
-
+    @Test
+    fun `cancel event`() {
+        val event = eventRepo.addEvent(createTestEvent())
+        eventRepo.cancelEvent(event.id)
+        val result = eventRepo.getEvent(event.id)
+        assertEquals(true, result.isCancelled)
+    }
 }

@@ -1,5 +1,6 @@
 plugins {
-    kotlin("jvm") version "1.9.24"
+    kotlin("jvm") version "2.0.0"
+    kotlin("plugin.serialization") version "1.9.0"
 }
 
 group = "org.example"
@@ -40,6 +41,12 @@ dependencies {
     implementation("io.insert-koin:koin-ktor:3.5.0")
     implementation("org.valiktor:valiktor-core:0.12.0")
 
+    implementation("io.ktor:ktor-server-auth:$ktorVersion")
+    implementation("io.ktor:ktor-server-auth-jwt:$ktorVersion")
+    implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
+
 
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
@@ -50,6 +57,9 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.5")
 
     implementation("org.liquibase:liquibase-core:4.31.1")
+
+implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+
 }
 
 tasks.test {
@@ -57,5 +67,5 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(8)
+    jvmToolchain(11)
 }

@@ -12,6 +12,7 @@ object UserMapper {
         login = row[UserDbModel.username],
         password = row[UserDbModel.password],
         email = row[UserDbModel.email],
+        bannedUntil = row[UserDbModel.bannedUntil]?.let { Converter.convertTimestampToDate(it) },
         role = RolesMapper.fromDbModelToEnum(row[UserDbModel.role])
     )
 
