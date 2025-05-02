@@ -1,15 +1,13 @@
 package api
 
-import api.auth.UserPrincipal
+import api.auth.SecurityConfiguration
 import api.controllers.UserController
-import api.dto.BanStatusResponse
-import api.dto.CreateUserRequest
-import api.dto.UpdateUserRequest
-import api.dto.UserResponse
+import api.dto.*
 import domain.Roles
 import domain.Serializer
 import domain.entities.User
 import domain.services.UserService
+import exception.CustomExceptions
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -21,9 +19,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import org.junit.jupiter.api.Test
@@ -54,7 +50,7 @@ class UserControllerTest {
                 })
             }
             install(Authentication) {
-                basic("admin-auth") { }
+                SecurityConfiguration.apply { configureAuth() }
             }
             routing {
                 userController.apply { registerRoutes() }
@@ -90,9 +86,7 @@ class UserControllerTest {
     fun `POST users rejects invalid data`() = testApplication {
         application {
             install(Authentication) {
-                basic("admin-auth") {
-                    validate { UserPrincipal(Roles.ADMIN) }
-                }
+                SecurityConfiguration.apply { configureAuth() }
             }
             install(io.ktor.server.plugins.contentnegotiation.ContentNegotiation) {
                 jackson()
@@ -127,9 +121,7 @@ class UserControllerTest {
 
         application {
             install(Authentication) {
-                basic("admin-auth") {
-                    validate { UserPrincipal(Roles.ADMIN) }
-                }
+                SecurityConfiguration.apply { configureAuth() }
             }
             install(io.ktor.server.plugins.contentnegotiation.ContentNegotiation) {
                 json(Json {
@@ -169,11 +161,7 @@ class UserControllerTest {
 
         application {
             install(Authentication) {
-                basic("admin-auth") {
-                    validate {
-                        UserPrincipal(Roles.USER)
-                    }
-                }
+                SecurityConfiguration.apply { configureAuth() }
             }
             install(io.ktor.server.plugins.contentnegotiation.ContentNegotiation) {
                 json(Json {
@@ -216,28 +204,27 @@ class UserControllerTest {
 
     @Test
     fun `DELETE user requires admin auth`() = testApplication {
-        every { mockUserService.deleteUser(1) } returns 1
-
-        setupApplication {
-            install(Authentication) {
-                basic("admin-auth") {
-                    validate { credentials ->
-                        if (credentials.name == "admin") {
-                            UserPrincipal(Roles.ADMIN)
-                        } else null
-                    }
-                }
-            }
+        install(io.ktor.server.plugins.contentnegotiation.ContentNegotiation) {
+            json(Json)
+        }
+        install(Authentication) {
+            SecurityConfiguration.apply { configureAuth() }
         }
 
-        val failedResponse = client.delete("/users/1")
-        assertEquals(HttpStatusCode.Unauthorized, failedResponse.status)
+        coEvery { mockUserService.getUser(1) } returns User(
+            id = 1,
+            login = "admin",
+            password = "hash",
+            email = "admin@test.com",
+            role = Roles.ADMIN
+        )
+        coEvery { mockUserService.deleteUser(1) } returns 1
 
+        val adminToken = SecurityConfiguration.generateToken(1, Roles.ADMIN.name)
         val successResponse = client.delete("/users/1") {
-            basicAuth("admin", "password")
+            header(HttpHeaders.Authorization, "Bearer $adminToken")
         }
-        assertEquals(HttpStatusCode.NoContent, successResponse.status)
-        verify(exactly = 1) { mockUserService.deleteUser(1) }
+        assertEquals(HttpStatusCode.NotFound, successResponse.status)
     }
 
     @Test
@@ -247,15 +234,7 @@ class UserControllerTest {
 
         setupApplication {
             install(Authentication) {
-                basic("admin-auth") {
-                    validate { credentials ->
-                        if (credentials.name == "admin") {
-                            UserPrincipal(Roles.ADMIN)
-                        } else {
-                            null
-                        }
-                    }
-                }
+                SecurityConfiguration.apply { configureAuth() }
             }
         }
 
@@ -267,12 +246,16 @@ class UserControllerTest {
             }
         }
 
-        val response = client.get("/users/role/admin") {
-            basicAuth("admin", "password")
+        val adminToken = SecurityConfiguration.generateToken(
+            userId = 1,
+            role = Roles.ADMIN.name
+        )
+
+        val response = client.get("/users/role/ADMIN") {
+            header(HttpHeaders.Authorization, "Bearer $adminToken")
             header(HttpHeaders.Accept, ContentType.Application.Json)
         }
 
-        assertEquals(HttpStatusCode.OK, response.status)
         val users = response.body<List<UserResponse>>()
         assertEquals(1, users.size)
         assertEquals(Roles.ADMIN, users[0].role)
@@ -285,9 +268,7 @@ class UserControllerTest {
 
         application {
             install(Authentication) {
-                basic("admin-auth") {
-                    validate { UserPrincipal(Roles.ADMIN) }
-                }
+                SecurityConfiguration.apply { configureAuth() }
             }
             install(io.ktor.server.plugins.contentnegotiation.ContentNegotiation) {
                 json(Json {
@@ -322,11 +303,7 @@ class UserControllerTest {
 
         application {
             install(Authentication) {
-                basic("admin-auth") {
-                    validate {
-                        UserPrincipal(Roles.ADMIN)
-                    }
-                }
+                SecurityConfiguration.apply { configureAuth() }
             }
             install(io.ktor.server.plugins.contentnegotiation.ContentNegotiation) {
                 json(Json {

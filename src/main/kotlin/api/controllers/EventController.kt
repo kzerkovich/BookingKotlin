@@ -4,9 +4,11 @@ import api.auth.UserPrincipal
 import api.dto.CreateEventRequest
 import api.dto.EventResponse
 import api.dto.UpdateEventRequest
+import data.mappers.enums.RolesMapper.fromDbModelToEnum
 import domain.services.EventService
 import io.ktor.http.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -83,34 +85,34 @@ class EventController(private val eventService: EventService) {
                 call.respond(events)
             }
 
-            authenticate("admin-auth") {
+            authenticate("auth-jwt") {
                 put("/{id}/tickets") {
                     val eventId = call.parameters["id"]?.toIntOrNull()
                         ?: throw IllegalArgumentException("Invalid event ID")
                     val newTotal = call.request.queryParameters["total"]?.toIntOrNull()
                         ?: throw IllegalArgumentException("Total tickets required")
 
-                    val userPrincipal = call.principal<UserPrincipal>()
+                    val userPrincipal = call.principal<JWTPrincipal>()
                         ?: throw AccessDeniedException("Authentication required")
 
-                    val event = eventService.updateEventTickets(eventId, newTotal, userPrincipal.role)
+                    val event = eventService.updateEventTickets(eventId, newTotal, fromDbModelToEnum(userPrincipal.payload.getClaim("role").asString()))
                     call.respond(EventResponse(event))
                 }
             }
 
-            authenticate("admin-auth") {
+            authenticate("auth-jwt") {
                 post("/{id}/cancel") {
                     val eventId = call.parameters["id"]?.toIntOrNull()
                         ?: throw IllegalArgumentException("Invalid event ID")
-                    val requesterRole = call.principal<UserPrincipal>()?.role
+                    val requesterRole = call.principal<JWTPrincipal>()
                         ?: throw AccessDeniedException("Authentication required")
 
-                    eventService.cancelEvent(eventId, requesterRole)
+                    eventService.cancelEvent(eventId, fromDbModelToEnum(requesterRole.payload.getClaim("role").asString()))
                     call.respond(HttpStatusCode.OK)
                 }
             }
 
-            authenticate("admin-auth") {
+            authenticate("auth-jwt") {
                 put("/{id}/price") {
                     val eventId = call.parameters["id"]?.toIntOrNull()
                         ?: throw IllegalArgumentException("Invalid event ID")

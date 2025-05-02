@@ -6,8 +6,11 @@ import api.dto.UpdateUserRequest
 import api.dto.UserResponse
 import domain.Roles
 import domain.services.UserService
+import exception.CustomExceptions
 import io.ktor.http.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
+import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -46,17 +49,24 @@ class UserController(private val userService: UserService) {
                 call.respond(UserResponse(updatedUser))
             }
 
-            authenticate("admin-auth") {
+            authenticate("auth-jwt") {
                 delete("/{id}") {
-                    val userId = call.parameters["id"]?.toIntOrNull()
-                        ?: throw IllegalArgumentException("Invalid user ID")
+                    val principal = call.principal<JWTPrincipal>()
+                        ?: throw CustomExceptions.AuthenticationException("Not authenticated")
+
+                    if (principal.payload.getClaim("role").asString() != Roles.ADMIN.name) {
+                        throw CustomExceptions.ForbiddenException("Insufficient permissions")
+                    }
+
+                    val userId = call.parameters["id"]?.toInt()
+                        ?: throw BadRequestException("Invalid ID")
 
                     userService.deleteUser(userId)
                     call.respond(HttpStatusCode.NoContent)
                 }
             }
 
-            authenticate("admin-auth") {
+            authenticate("auth-jwt") {
                 get("/role/{role}") {
                     val role = call.parameters["role"]?.let { Roles.valueOf(it.uppercase()) }
                         ?: throw IllegalArgumentException("Invalid role")

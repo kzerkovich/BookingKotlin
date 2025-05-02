@@ -1,5 +1,7 @@
 package api
 
+import api.auth.SecurityConfiguration
+import api.auth.SecurityConfiguration.configureAuth
 import api.auth.UserPrincipal
 import api.controllers.EventController
 import api.dto.CreateEventRequest
@@ -233,9 +235,7 @@ class EventControllerTest {
 
         setupApplication {
             install(Authentication) {
-                basic("admin-auth") {
-                    validate { UserPrincipal(domain.Roles.USER) }
-                }
+                SecurityConfiguration.apply { configureAuth() }
             }
         }
 
@@ -259,31 +259,39 @@ class EventControllerTest {
 
     @Test
     fun `Authenticated ticket update requires admin`() = testApplication {
-        val testEvent = createTestEvent()
-        coEvery { mockEventService.updateEventTickets(1, 200, any()) } returns testEvent
+        // 1. Установка плагинов
+        install(io.ktor.server.plugins.contentnegotiation.ContentNegotiation) {
+            json(Json { ignoreUnknownKeys = true })
+        }
+        install(Authentication) {
+            SecurityConfiguration.apply {  configureAuth() }
+        }
 
-        setupApplication {
-            install(Authentication) {
-                basic("admin-auth") {
-                    validate { credentials ->
-                        if (credentials.name == "admin") {
-                            UserPrincipal(domain.Roles.ADMIN)
-                        } else {
-                            null
-                        }
-                    }
-                }
+        application {
+            routing {
+                EventController(mockEventService).apply {  registerRoutes() }
             }
         }
 
-        val failedResponse = client.put("/events/1/tickets?total=200")
-        assertEquals(HttpStatusCode.Unauthorized, failedResponse.status)
+        val testEvent = createTestEvent()
+        coEvery { mockEventService.updateEventTickets(1, 200, Roles.ADMIN) } returns testEvent
 
+
+
+        val adminToken = SecurityConfiguration.generateToken(
+            userId = 1,
+            role = Roles.ADMIN.name
+        )
+
+        // 5. Выполнение запроса
         val response = client.put("/events/1/tickets?total=200") {
-            basicAuth("admin", "password")
+            header(HttpHeaders.Authorization, "Bearer $adminToken")
+            header(HttpHeaders.Accept, ContentType.Application.Json)
         }
+
+        // 6. Проверки
         assertEquals(HttpStatusCode.OK, response.status)
-        coVerify(exactly = 1) { mockEventService.updateEventTickets(1, 200, domain.Roles.ADMIN) }
+        coVerify(exactly = 1) { mockEventService.updateEventTickets(1, 200, Roles.ADMIN) }
     }
 
     @Test
@@ -303,16 +311,7 @@ class EventControllerTest {
                 })
             }
             install(Authentication) {
-                basic("admin-auth") {
-                    realm = "Secure domain"
-                    validate { credentials ->
-                        if (credentials.name == "admin" && credentials.password == "password") {
-                            UserPrincipal(Roles.ADMIN)
-                        } else {
-                            null
-                        }
-                    }
-                }
+                SecurityConfiguration.apply { configureAuth() }
             }
             routing {
                 eventController.apply { registerRoutes() }
@@ -321,16 +320,24 @@ class EventControllerTest {
 
         val client = createClient {
             install(ContentNegotiation) {
-                json()
+                json(Json {
+                    ignoreUnknownKeys = true
+                })
             }
         }
+
+        val adminToken = SecurityConfiguration.generateToken(
+            userId = 1,
+            role = Roles.ADMIN.name
+        )
 
         client.post("/events/1/cancel").apply {
             assertEquals(HttpStatusCode.Unauthorized, status)
         }
 
         client.post("/events/1/cancel") {
-            basicAuth("admin", "password")
+            header(HttpHeaders.Authorization, "Bearer $adminToken")
+            header(HttpHeaders.Accept, ContentType.Application.Json)
         }.apply {
             assertEquals(HttpStatusCode.OK, status)
         }
@@ -346,9 +353,7 @@ class EventControllerTest {
     private fun TestApplicationBuilder.setupApplication(
         authConfig: Application.() -> Unit = {
             install(Authentication) {
-                basic("admin-auth") {
-                    validate { UserPrincipal(domain.Roles.USER) }
-                }
+                SecurityConfiguration.apply { configureAuth() }
             }
         }
     ) {

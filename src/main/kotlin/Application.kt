@@ -1,3 +1,4 @@
+import api.auth.SecurityConfiguration
 import api.auth.UserPrincipal
 import api.controllers.BookingController
 import api.controllers.EventController
@@ -26,16 +27,7 @@ fun main() {
 
 fun Application.module() {
     install(Authentication) {
-        basic("admin-auth") {
-            realm = "Admin Access"
-            validate { credentials ->
-                if (credentials.name == "admin" && credentials.password == "admin") {
-                    UserPrincipal(role = Roles.ADMIN)
-                } else {
-                    null
-                }
-            }
-        }
+         SecurityConfiguration.apply { configureAuth() }
     }
 
     install(Koin) {
