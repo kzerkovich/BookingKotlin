@@ -22,109 +22,222 @@ class EventController(private val eventService: EventService) {
         route("/events") {
 
             post {
-                val request = call.receive<CreateEventRequest>()
-                request.validate()
+                try {
+                    val request = call.receive<CreateEventRequest>()
+                    println("POST /events | ${request.name} (${request.date})")
+                    request.validate()
 
-                val event = request.toEntity()
-                val createdEvent = eventService.createEvent(event)
-                call.respond(HttpStatusCode.Created, EventResponse(createdEvent))
+                    val event = request.toEntity()
+                    val createdEvent = eventService.createEvent(event)
+                    println("Event ${createdEvent.id} created")
+                    call.respond(HttpStatusCode.Created, EventResponse(createdEvent))
+                } catch (e: Exception) {
+                    println("Event creation failed")
+                    throw e
+                }
             }
 
             get {
-                val events = eventService.getAllEvents().map { EventResponse(it) }
-                call.respond(events)
+                try {
+                    println("GET /events")
+                    val events = eventService.getAllEvents().map { EventResponse(it) }
+                    println("Returning ${events.size} events")
+                    call.respond(events)
+                } catch (e: Exception) {
+                    println("Failed to get events")
+                    throw e
+                }
             }
 
             get("/{id}") {
-                val eventId = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid event ID")
-                val event = eventService.getEvent(eventId)
-                call.respond(EventResponse(event))
+                try {
+                    val eventId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid event ID").also {
+                            println("EventID parameter missing")
+                        }
+                    println("GET /events/$eventId")
+                    val event = eventService.getEvent(eventId)
+                    println("Event details: ${event.name}")
+                    call.respond(EventResponse(event))
+                } catch (e: Exception) {
+                    println("Failed to get event")
+                    throw e
+                }
             }
 
             put("/{id}") {
-                val eventId = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid event ID")
-                val request = call.receive<UpdateEventRequest>()
+                try {
+                    val eventId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid event ID").also {
+                            println("EventID parameter missing")
+                        }
+                    println("PUT /events/$eventId")
+                    val request = call.receive<UpdateEventRequest>()
 
-                val existingEvent = eventService.getEvent(eventId)
-                val updatedEvent = request.applyTo(existingEvent)
-                eventService.updateEvent(updatedEvent)
-                call.respond(EventResponse(updatedEvent))
+                    val existingEvent = eventService.getEvent(eventId)
+                    val updatedEvent = request.applyTo(existingEvent)
+                    eventService.updateEvent(updatedEvent)
+                    println("Event $eventId updated")
+                    call.respond(EventResponse(updatedEvent))
+                } catch (e: Exception) {
+                    println("Event update failed")
+                    throw e
+                }
             }
 
             delete("/{id}") {
-                val eventId = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid event ID")
-                eventService.deleteEvent(eventId)
-                call.respond(HttpStatusCode.NoContent)
+                try {
+                    val eventId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid event ID").also {
+                            println("EventID parameter missing")
+                        }
+                    println("DELETE /events/$eventId")
+                    eventService.deleteEvent(eventId)
+                    println("Event $eventId deleted")
+                    call.respond(HttpStatusCode.NoContent)
+                } catch (e: Exception) {
+                    println("Event deletion failed")
+                    throw e
+                }
             }
 
             get("/location/{location}") {
-                val location = call.parameters["location"]
-                    ?: throw IllegalArgumentException("Location is required")
+                try {
+                    val location = call.parameters["location"]
+                        ?: throw IllegalArgumentException("Location is required").also {
+                            println("Location parameter missing")
+                        }
 
-                if (location.isBlank()) {
-                    throw IllegalArgumentException("Location cannot be empty")
+                    println("GET /events/location/$location")
+                    if (location.isBlank()) {
+                        println("Empty location parameter")
+                        throw IllegalArgumentException("Location cannot be empty")
+                    }
+
+                    val events = eventService.getEventsByLocation(location)
+                        .map { EventResponse(it) }
+                    println("Found ${events.size} events in $location")
+                    call.respond(events)
+                } catch (e: Exception) {
+                    println("Event deletion failed")
+                    throw e
                 }
-
-                val events = eventService.getEventsByLocation(location)
-                    .map { EventResponse(it) }
-
-                call.respond(events)
             }
 
             get("/filter") {
-                val location = call.request.queryParameters["location"]
-                val category = call.request.queryParameters["category"]
-                val startDate = call.request.queryParameters["startDate"]?.toLongOrNull()?.let { Date(it) }
-                val endDate = call.request.queryParameters["endDate"]?.toLongOrNull()?.let { Date(it) }
+                try {
+                    val location = call.request.queryParameters["location"]
+                    val category = call.request.queryParameters["category"]
+                    val startDate = call.request.queryParameters["startDate"]?.toLongOrNull()?.let { Date(it) }
+                    val endDate = call.request.queryParameters["endDate"]?.toLongOrNull()?.let { Date(it) }
 
-                val events = eventService.getFilteredEvents(location, category, startDate, endDate)
-                    .map { EventResponse(it) }
-                call.respond(events)
+                    println(
+                        "GET /events/filter | Params: " +
+                                "location=$location, category=$category, " +
+                                "startDate=$startDate, endDate=$endDate"
+                    )
+
+                    val events = eventService.getFilteredEvents(location, category, startDate, endDate)
+                        .map { EventResponse(it) }
+                    println("Found ${events.size} events matching filters")
+                    call.respond(events)
+                } catch (e: Exception) {
+                    println("Event deletion failed")
+                    throw e
+                }
             }
 
             authenticate("auth-jwt") {
                 put("/{id}/tickets") {
-                    val eventId = call.parameters["id"]?.toIntOrNull()
-                        ?: throw IllegalArgumentException("Invalid event ID")
-                    val newTotal = call.request.queryParameters["total"]?.toIntOrNull()
-                        ?: throw IllegalArgumentException("Total tickets required")
+                    try {
+                        val eventId = call.parameters["id"]?.toIntOrNull()
+                            ?: throw IllegalArgumentException("Invalid event ID").also {
+                                println("Missing event ID in tickets update")
+                            }
+                        val newTotal = call.request.queryParameters["total"]?.toIntOrNull()
+                            ?: throw IllegalArgumentException("Total tickets required").also {
+                                println("Missing 'total' parameter")
+                            }
 
-                    val userPrincipal = call.principal<JWTPrincipal>()
-                        ?: throw AccessDeniedException("Authentication required")
+                        val userPrincipal = call.principal<JWTPrincipal>()
+                            ?: throw AccessDeniedException("Authentication required").also {
+                                println("Unauthorized tickets update attempt")
+                            }
+                        val role = fromDbModelToEnum(userPrincipal.payload.getClaim("role").asString())
+                        println(
+                            "PUT /events/$eventId/tickets | " +
+                                    "New total: $newTotal | " +
+                                    "Initiator role: $role"
+                        )
 
-                    val event = eventService.updateEventTickets(eventId, newTotal, fromDbModelToEnum(userPrincipal.payload.getClaim("role").asString()))
-                    call.respond(EventResponse(event))
+                        val event = eventService.updateEventTickets(eventId, newTotal, role)
+                        println("Tickets updated for event $eventId. New total: $newTotal")
+                        call.respond(EventResponse(event))
+                    } catch (e: Exception) {
+                        println("Failed to update tickets for event")
+                        throw e
+                    }
                 }
             }
 
             authenticate("auth-jwt") {
                 post("/{id}/cancel") {
-                    val eventId = call.parameters["id"]?.toIntOrNull()
-                        ?: throw IllegalArgumentException("Invalid event ID")
-                    val requesterRole = call.principal<JWTPrincipal>()
-                        ?: throw AccessDeniedException("Authentication required")
+                    try {
+                        val eventId = call.parameters["id"]?.toIntOrNull()
+                            ?: throw IllegalArgumentException("Invalid event ID").also {
+                                println("Missing event ID in cancel request")
+                            }
+                        val requesterRole = call.principal<JWTPrincipal>()
+                            ?: throw AccessDeniedException("Authentication required").also {
+                                println("Unauthorized cancel attempt")
+                            }
 
-                    eventService.cancelEvent(eventId, fromDbModelToEnum(requesterRole.payload.getClaim("role").asString()))
-                    call.respond(HttpStatusCode.OK)
+                        val role = fromDbModelToEnum(requesterRole.payload.getClaim("role").asString())
+                        println(
+                            "POST /events/$eventId/cancel | " +
+                                    "Initiator role: $role"
+                        )
+
+                        eventService.cancelEvent(eventId, role)
+                        println("Event $eventId cancelled by $role")
+                        call.respond(HttpStatusCode.OK)
+                    } catch (e: Exception) {
+                        println("Event deletion failed")
+                        throw e
+                    }
                 }
             }
 
             authenticate("auth-jwt") {
                 put("/{id}/price") {
-                    val eventId = call.parameters["id"]?.toIntOrNull()
-                        ?: throw IllegalArgumentException("Invalid event ID")
+                    try {
+                        val eventId = call.parameters["id"]?.toIntOrNull()
+                            ?: throw IllegalArgumentException("Invalid event ID").also {
+                                println("Missing event ID in price update")
+                            }
 
-                    val newPrice = call.request.queryParameters["price"]?.toDoubleOrNull()
-                        ?: throw IllegalArgumentException("Price is required")
+                        val newPrice = call.request.queryParameters["price"]?.toDoubleOrNull()
+                            ?: throw IllegalArgumentException("Price is required").also {
+                                println("Missing 'price' parameter")
+                            }
 
-                    val userPrincipal = call.principal<UserPrincipal>()
-                        ?: throw AccessDeniedException("Authentication required")
+                        val userPrincipal = call.principal<UserPrincipal>()
+                            ?: throw AccessDeniedException("Authentication required").also {
+                                println("Unauthorized price update attempt")
+                            }
+                        println(
+                            "PUT /events/$eventId/price | " +
+                                    "New price: $newPrice | " +
+                                    "Initiator role: ${userPrincipal.role}"
+                        )
 
-                    val event = eventService.updateEventPrice(eventId, newPrice, userPrincipal.role)
-                    call.respond(EventResponse(event))
+                        val event = eventService.updateEventPrice(eventId, newPrice, userPrincipal.role)
+                        println("Price updated for event $eventId. New price: $newPrice")
+                        call.respond(EventResponse(event))
+                    } catch (e: Exception) {
+                        println("Event deletion failed")
+                        throw e
+                    }
                 }
             }
         }

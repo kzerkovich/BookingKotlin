@@ -16,86 +16,154 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 class UserController(private val userService: UserService) {
-
     fun Route.registerRoutes() {
         route("/users") {
 
             post {
-                val request = call.receive<CreateUserRequest>()
-                request.validate()
+                try {
+                    val request = call.receive<CreateUserRequest>()
+                    println("POST /users | Login: ${request.login}")
+                    request.validate()
 
-                val user = request.toEntity()
-                val createdUser = userService.registerUser(user)
-                call.respond(HttpStatusCode.Created, UserResponse(createdUser))
+                    val user = request.toEntity()
+                    val createdUser = userService.registerUser(user)
+                    println("User ${createdUser.id} registered")
+                    call.respond(HttpStatusCode.Created, UserResponse(createdUser))
+                } catch (e: Exception) {
+                    println("User registration failed: ${e.message}")
+                    throw e
+                }
             }
 
             get("/{id}") {
-                val userId = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid user ID")
+                try {
+                    val userId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid user ID").also {
+                            println("Missing user ID parameter")
+                        }
 
-                val user = userService.getUser(userId)
-                call.respond(UserResponse(user))
+                    println("GET /users/$userId")
+                    val user = userService.getUser(userId)
+                    println("Retrieved user ${user.login} (ID: $userId)")
+                    call.respond(UserResponse(user))
+                } catch (e: Exception) {
+                    println("Failed to get user ")
+                    throw e
+                }
             }
 
             put("/{id}") {
-                val userId = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid user ID")
+                try {
+                    val userId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid user ID").also {
+                            println("Missing user ID parameter")
+                        }
 
-                val request = call.receive<UpdateUserRequest>()
-                request.validate()
+                    val request = call.receive<UpdateUserRequest>()
+                    println("PUT /users/$userId | Updates: ${request}")
+                    request.validate()
 
-                val existingUser = userService.getUser(userId)
-                val updatedUser = userService.updateUser(request.applyTo(existingUser))
-                call.respond(UserResponse(updatedUser))
+                    val existingUser = userService.getUser(userId)
+                    val updatedUser = userService.updateUser(request.applyTo(existingUser))
+                    println("User $userId updated")
+                    call.respond(UserResponse(updatedUser))
+                } catch (e: Exception) {
+                    println("Failed to update user")
+                    throw e
+                }
             }
 
             authenticate("auth-jwt") {
                 delete("/{id}") {
-                    val principal = call.principal<JWTPrincipal>()
-                        ?: throw CustomExceptions.AuthenticationException("Not authenticated")
+                    try {
+                        val principal = call.principal<JWTPrincipal>()
+                            ?: throw CustomExceptions.AuthenticationException("Not authenticated").also {
+                                println("Unauthorized delete attempt")
+                            }
 
-                    if (principal.payload.getClaim("role").asString() != Roles.ADMIN.name) {
-                        throw CustomExceptions.ForbiddenException("Insufficient permissions")
+                        if (principal.payload.getClaim("role").asString() != Roles.ADMIN.name) {
+                            println(
+                                "Forbidden delete attempt by ${
+                                    principal.payload.getClaim("role").asString()
+                                }"
+                            )
+                            throw CustomExceptions.ForbiddenException("Insufficient permissions")
+                        }
+
+                        val userId = call.parameters["id"]?.toInt()
+                            ?: throw BadRequestException("Invalid ID").also {
+                                println("Invalid user ID format")
+                            }
+
+                        println("DELETE /users/$userId by ${principal.payload.getClaim("role").asString()}")
+                        userService.deleteUser(userId)
+                        println("User $userId deleted by admin")
+                        call.respond(HttpStatusCode.NoContent)
+                    } catch (e: Exception) {
+                        println("User deletion failed")
+                        throw e
                     }
-
-                    val userId = call.parameters["id"]?.toInt()
-                        ?: throw BadRequestException("Invalid ID")
-
-                    userService.deleteUser(userId)
-                    call.respond(HttpStatusCode.NoContent)
                 }
             }
 
             authenticate("auth-jwt") {
                 get("/role/{role}") {
-                    val role = call.parameters["role"]?.let { Roles.valueOf(it.uppercase()) }
-                        ?: throw IllegalArgumentException("Invalid role")
+                    try {
+                        val role = call.parameters["role"]?.let { Roles.valueOf(it.uppercase()) }
+                            ?: throw IllegalArgumentException("Invalid role").also {
+                                println("Missing role parameter")
+                            }
+                        println("GET /users/role/$role by ${call.principal<JWTPrincipal>()?.payload?.getClaim("role")}")
 
-                    val users = userService.getUsersByRole(role)
-                        .map { UserResponse(it) }
-                    call.respond(users)
+                        val users = userService.getUsersByRole(role)
+                            .map { UserResponse(it) }
+                        println("Found ${users.size} users with role $role")
+                        call.respond(users)
+                    } catch (e: Exception) {
+                        println("Failed to get users by role")
+                        throw e
+                    }
                 }
             }
 
             post("/{id}/notifications") {
-                val userId = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid user ID")
+                try {
+                    val userId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid user ID").also {
+                            println("Missing user ID parameter")
+                        }
 
-                val enabled = call.request.queryParameters["enabled"]?.toBoolean()
-                    ?: throw IllegalArgumentException("Enabled flag is required")
-
-                val user = userService.toggleNotifications(userId, enabled)
-                call.respond(UserResponse(user))
+                    val enabled = call.request.queryParameters["enabled"]?.toBoolean()
+                        ?: throw IllegalArgumentException("Enabled flag is required").also {
+                            println("Missing enabled parameter")
+                        }
+                    println("POST /users/$userId/notifications | Enabled: $enabled")
+                    val user = userService.toggleNotifications(userId, enabled)
+                    println("Notifications for user $userId set to $enabled")
+                    call.respond(UserResponse(user))
+                } catch (e: Exception) {
+                    println("Failed to toggle notifications")
+                    throw e
+                }
             }
 
             get("/{id}/ban-status") {
-                val userId = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Некорректный ID пользователя")
+                try {
+                    val userId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Некорректный ID пользователя").also {
+                            println("Missing user ID parameter")
+                        }
 
-                val isBanned = userService.checkUserBan(userId)
-                val bannedUntil = userService.getUser(userId).bannedUntil?.time
+                    println("GET /users/$userId/ban-status")
+                    val isBanned = userService.checkUserBan(userId)
+                    val bannedUntil = userService.getUser(userId).bannedUntil?.time
 
-                call.respond(BanStatusResponse(isBanned, bannedUntil))
+                    println("Ban status for user $userId: $isBanned")
+                    call.respond(BanStatusResponse(isBanned, bannedUntil))
+                } catch (e: Exception) {
+                    println("Failed to get ban status")
+                    throw e
+                }
             }
         }
     }

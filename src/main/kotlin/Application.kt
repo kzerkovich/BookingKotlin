@@ -1,12 +1,10 @@
 import api.auth.SecurityConfiguration
-import api.auth.UserPrincipal
 import api.controllers.BookingController
 import api.controllers.EventController
 import api.controllers.TicketController
 import api.controllers.UserController
 import data.db.DatabaseFactory
 import di.appModule
-import domain.Roles
 import exception.configureExceptionHandling
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -20,32 +18,52 @@ import kotlinx.serialization.json.Json
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 
+
 fun main() {
-    DatabaseFactory.init()
-    embeddedServer(Netty, port = 8080, module = Application::module).start(wait = true)
+    try {
+        println("Starting application...")
+        DatabaseFactory.init()
+        embeddedServer(Netty, port = 8080, module = Application::module).start(wait = true)
+    } catch (e: Exception) {
+        println("Application startup failed")
+        throw e
+    } finally {
+        println("Application stopped")
+    }
 }
 
 fun Application.module() {
+    println("Configuring application module...")
     install(Authentication) {
-         SecurityConfiguration.apply { configureAuth() }
+        println("Initializing authentication...")
+        SecurityConfiguration.apply { configureAuth() }
+        println("Authentication configured")
     }
 
     install(Koin) {
+        println("Initializing Koin DI...")
         modules(appModule)
+        println("Koin DI configured")
     }
 
     install(ContentNegotiation) {
+        println("Configuring ContentNegotiation...")
         json(Json {
             ignoreUnknownKeys = true
             prettyPrint = true
         })
+        println("JSON serialization configured")
     }
 
     routing {
-        openAPI(path="/", swaggerFile = "openapi.json")
+        println("Setting up OpenAPI documentation...")
+        openAPI(path = "/", swaggerFile = "openapi.json")
+        println("OpenAPI docs available at /")
     }
 
+    println("Configuring exception handling...")
     configureExceptionHandling()
+    println("Exception handling configured")
 
     val bookingController by inject<BookingController>()
     val eventController by inject<EventController>()
@@ -53,9 +71,31 @@ fun Application.module() {
     val ticketController by inject<TicketController>()
 
     routing {
-        bookingController.apply { registerRoutes() }
-        eventController.apply{ registerRoutes() }
-        userController.apply{ registerRoutes() }
-        ticketController.apply { registerRoutes() }
+        println("Registering routes...")
+        bookingController.apply {
+            println("Registering booking routes")
+            registerRoutes()
+        }
+        eventController.apply {
+            println("Registering event routes")
+            registerRoutes()
+        }
+        userController.apply {
+            println("Registering user routes")
+            registerRoutes()
+        }
+        ticketController.apply {
+            println("Registering ticket routes")
+            registerRoutes()
+        }
+        println("All routes registered")
+    }
+
+    environment.monitor.subscribe(ApplicationStarted) {
+        println("Server started successfully on port 8080")
+    }
+
+    environment.monitor.subscribe(ApplicationStopPreparing) {
+        println("Server shutdown initiated")
     }
 }

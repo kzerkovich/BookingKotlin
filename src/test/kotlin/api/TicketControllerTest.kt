@@ -21,6 +21,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
+import org.junit.Assert.assertNotNull
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.valiktor.ConstraintViolationException
 import java.util.*
@@ -158,8 +160,22 @@ class TicketControllerTest {
     @Test
     fun `POST purchase tickets processes payment`() = testApplication {
         val testTickets = listOf(
-            Ticket(1, 2, 3, status = TicketStatus.PURCHASED),
-            Ticket(2, 2, 3, status = TicketStatus.PURCHASED)
+            Ticket(
+                id = 1,
+                eventId = 2,
+                userId = 3,
+                bookingId = 1,
+                status = TicketStatus.PURCHASED,
+                purchaseDate = Date()
+            ),
+            Ticket(
+                id = 2,
+                eventId = 2,
+                userId = 3,
+                bookingId = 1,
+                status = TicketStatus.PURCHASED,
+                purchaseDate = Date()
+            )
         )
 
         coEvery { mockTicketService.purchaseTickets(1, "payment_123") } returns testTickets
@@ -171,6 +187,7 @@ class TicketControllerTest {
         }
 
         val request = PurchaseTicketsRequest("payment_123")
+
         val response = client.post("/tickets/purchase/1") {
             contentType(ContentType.Application.Json)
             setBody(request)
@@ -180,6 +197,9 @@ class TicketControllerTest {
         val tickets = response.body<List<TicketResponse>>()
         assertEquals(2, tickets.size)
         assertEquals(TicketStatus.PURCHASED, tickets[0].status)
+
+        Assertions.assertNotNull(tickets[0].bookingId)
+        Assertions.assertNotNull(tickets[0].purchaseDate)
 
         assertFailsWith<IllegalArgumentException> {
             client.post("/tickets/purchase/invalid") {

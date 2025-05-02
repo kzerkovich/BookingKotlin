@@ -12,67 +12,107 @@ import org.valiktor.functions.isPositive
 import org.valiktor.validate
 
 class BookingController(private val bookingService: BookingService) {
-
-    fun Route.registerRoutes(){
+    fun Route.registerRoutes() {
         route("/bookings") {
 
             post {
-                val request = call.receive<CreateBookingRequest>()
+                try {
+                    val request = call.receive<CreateBookingRequest>()
+                    println("POST /bookings | UserID: ${request.userId}, EventID: ${request.eventId}, Tickets: ${request.ticketsCount}")
+                    validate(request) {
+                        validate(CreateBookingRequest::userId).isPositive()
+                        validate(CreateBookingRequest::eventId).isPositive()
+                        validate(CreateBookingRequest::ticketsCount).isPositive()
+                    }
 
-                validate(request) {
-                    validate(CreateBookingRequest::userId).isPositive()
-                    validate(CreateBookingRequest::eventId).isPositive()
-                    validate(CreateBookingRequest::ticketsCount).isPositive()
+                    val booking = bookingService.createBooking(
+                        userId = request.userId,
+                        eventId = request.eventId,
+                        ticketsCount = request.ticketsCount
+                    )
+                    println("Booking ${booking.id} created")
+                    call.respond(BookingResponse(booking))
+                } catch (e: Exception) {
+                    println("Booking creation failed")
+                    throw e
                 }
-
-                val booking = bookingService.createBooking(
-                    userId = request.userId,
-                    eventId = request.eventId,
-                    ticketsCount = request.ticketsCount
-                )
-
-                call.respond(BookingResponse(booking))
             }
 
             get {
-                val userId = call.request.queryParameters["userId"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("User ID is required")
+                try {
+                    val userId = call.request.queryParameters["userId"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("User ID is required").also {
+                            println("UserID parameter missing")
+                        }
 
-                if (userId <= 0) {
-                    throw IllegalArgumentException("User ID must be positive")
+                    println("GET /bookings?userId=$userId")
+
+                    if (userId <= 0) {
+                        println("Invalid UserID: $userId")
+                        throw IllegalArgumentException("User ID must be positive")
+                    }
+
+                    val bookings = bookingService.getUserBookings(userId)
+                        .map { BookingResponse(it) }
+
+                    println("Found ${bookings.size} bookings")
+                    call.respond(bookings)
+                } catch (e: Exception) {
+                    println("Failed to get bookings")
+                    throw e
                 }
-
-                val bookings = bookingService.getUserBookings(userId)
-                    .map { BookingResponse(it) }
-
-                call.respond(bookings)
             }
 
             put("/{id}/confirm") {
-                val bookingId = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid booking ID")
+                try {
+                    val bookingId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid booking ID").also {
+                            println("BookingID parameter missing")
+                        }
 
-                val request = call.receive<ConfirmBookingRequest>()
+                    println("PUT /bookings/$bookingId/confirm")
+                    val request = call.receive<ConfirmBookingRequest>()
 
-                val updatedBooking = bookingService.confirmBooking(
-                    bookingId = bookingId,
-                    paymentData = request.paymentData
-                )
+                    val updatedBooking = bookingService.confirmBooking(
+                        bookingId = bookingId,
+                        paymentData = request.paymentData
+                    )
 
-                call.respond(BookingResponse(updatedBooking))
+                    println("Booking $bookingId confirmed")
+                    call.respond(BookingResponse(updatedBooking))
+                } catch (e: Exception) {
+                    println("Booking confirmation failed")
+                    throw e
+                }
             }
 
             delete("/{id}") {
-                val bookingId = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid booking ID")
+                try {
+                    val bookingId = call.parameters["id"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid booking ID").also {
+                            println("BookingID parameter missing")
+                        }
 
-                bookingService.cancelBooking(bookingId)
-                call.respond(HttpStatusCode.NoContent)
+                    println("DELETE /bookings/$bookingId")
+                    bookingService.cancelBooking(bookingId)
+                    println("Booking $bookingId deleted")
+                    call.respond(HttpStatusCode.NoContent)
+                } catch (e: Exception) {
+                    println("Booking deletion failed")
+                    throw e
+                }
             }
 
             post("/check-expired") {
-                bookingService.checkExpiredBookings()
-                call.respond(HttpStatusCode.OK, "Expired bookings processed")
+                try {
+                    println("Processing expired bookings")
+                    bookingService.checkExpiredBookings()
+                    println("Expired bookings processed")
+                    call.respond(HttpStatusCode.OK, "Expired bookings processed")
+                } catch (e: Exception) {
+                    println("Failed to process expired bookings")
+                    throw e
+                }
             }
         }
     }

@@ -11,7 +11,6 @@ class ValidationException(message: String) : RuntimeException(message)
 
 fun Application.configureExceptionHandling() {
     install(StatusPages) {
-        // Кастомные исключения
         exception<NotFoundException> { call, cause ->
             call.respond(HttpStatusCode.NotFound, mapOf("error" to (cause.message ?: "Ресурс не найден")))
         }
@@ -20,7 +19,6 @@ fun Application.configureExceptionHandling() {
             call.respond(HttpStatusCode.BadRequest, mapOf("error" to (cause.message ?: "Некорректные данные")))
         }
 
-        // Стандартные исключения
         exception<IllegalArgumentException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, mapOf("error" to (cause.message ?: "Ошибка валидации")))
         }
@@ -37,7 +35,6 @@ fun Application.configureExceptionHandling() {
             call.respond(HttpStatusCode.Unauthorized, mapOf("error" to (cause.message ?: "Ошибка авторизации")))
         }
 
-        // Остальные ошибки
         exception<Throwable> { call, cause ->
             call.respond(
                 HttpStatusCode.InternalServerError,

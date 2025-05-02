@@ -68,6 +68,9 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 
     implementation("io.ktor:ktor-serialization-jackson:$ktorVersion")
+
+    implementation("ch.qos.logback:logback-classic:1.5.13")
+    implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
 }
 
 tasks.test {
