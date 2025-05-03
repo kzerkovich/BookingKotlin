@@ -72,6 +72,8 @@ dependencies {
 
     implementation("ch.qos.logback:logback-classic:1.5.13")
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
+
+    implementation("io.ktor:ktor-server-cors:$ktorVersion")
 }
 
 tasks.test {
