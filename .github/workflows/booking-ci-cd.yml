@@ -13,6 +13,10 @@ jobs:
   build-and-deploy:
     runs-on: self-hosted
     steps:
+      - name: Fix PowerShell Execution Policy
+        run: |
+          powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
