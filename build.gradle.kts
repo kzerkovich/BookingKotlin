@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.0.0"
     kotlin("plugin.serialization") version "1.9.0"
+    application
 }
 
 group = "org.example"
@@ -79,4 +80,15 @@ tasks.test {
 
 kotlin {
     jvmToolchain(11)
+}
+
+tasks.jar {
+    manifest {
+        attributes(
+            "Main-Class" to "ApplicationKt"
+        )
+    }
+
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

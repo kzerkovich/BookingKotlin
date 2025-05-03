@@ -1,4 +1,5 @@
-version: '3'
+version: '3.8'
+
 services:
   postgres:
     image: postgres:15
@@ -11,5 +12,32 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - booking-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking_user -d booking_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: booking_app
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_URL=jdbc:postgresql://postgres:5432/booking_db
+      - DB_USER=booking_user
+      - DB_PASSWORD=booking_pass
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - booking-network
+
 volumes:
   postgres_data:
+
+networks:
+  booking-network:
+    driver: bridge

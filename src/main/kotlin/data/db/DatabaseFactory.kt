@@ -10,7 +10,7 @@ import java.sql.DriverManager
 object DatabaseFactory {
     fun init() {
         Database.connect(
-            url = "jdbc:postgresql://localhost:5432/booking_db",
+            url = "jdbc:postgresql://postgres:5432/booking_db", // "jdbc:postgresql://localhost:5432/postgres"
             driver = "org.postgresql.Driver",
             user = "booking_user",
             password = "booking_pass"
@@ -19,7 +19,7 @@ object DatabaseFactory {
         createDatabaseIfNotExists()
 
         val connection = DriverManager.getConnection(
-            "jdbc:postgresql://localhost:5432/booking_db",
+            "jdbc:postgresql://postgres:5432/booking_db", // "jdbc:postgresql://localhost:5432/postgres"
             "booking_user",
             "booking_pass"
         )
@@ -38,9 +38,9 @@ object DatabaseFactory {
 
     private fun createDatabaseIfNotExists() {
         val adminConnection = DriverManager.getConnection(
-            "jdbc:postgresql://localhost:5432/postgres",
-            "postgres",
-            "password"
+            "jdbc:postgresql://postgres:5432/booking_db", // "jdbc:postgresql://localhost:5432/postgres"
+            "booking_user",
+            "booking_pass"
         )
 
         adminConnection.use { conn ->
