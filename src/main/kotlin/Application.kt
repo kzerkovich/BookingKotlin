@@ -10,8 +10,10 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.openapi.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
@@ -55,10 +57,26 @@ fun Application.module() {
         println("JSON serialization configured")
     }
 
+    install(CORS) {
+        println("Configuring CORS...")
+        anyHost()
+        allowCredentials = true
+        allowNonSimpleContentTypes = true
+        println("CORS configured")
+    }
+
+    routing {
+        println("Setting up static forms...")
+        staticResources("/", "static") {
+            default("VK_ID.html")
+        }
+        println("Static forms available at /")
+    }
+
     routing {
         println("Setting up OpenAPI documentation...")
-        openAPI(path = "/", swaggerFile = "openapi.json")
-        println("OpenAPI docs available at /")
+        openAPI(path = "/api-docs", swaggerFile = "openapi.json")
+        println("OpenAPI docs available at /api-docs")
     }
 
     println("Configuring exception handling...")
