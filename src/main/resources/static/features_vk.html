@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Booking Kotlin</title>
+  <style>
+    body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .logo {
+        width: 400px;
+        height: auto;
+    }
+
+    .user-data {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        width: 400px;
+    }
+  </style>
+</head>
+<body>
+<img src="booking_kotlin_logo.jpg" class="logo" alt="App Logo">
+<div>
+  <script src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js"></script>
+  <script type="text/javascript">
+    if ('VKIDSDK' in window) {
+      const VKID = window.VKIDSDK;
+
+      VKID.Config.init({
+        app: 53531200,
+        redirectUrl: 'http://localhost',
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+        scope: 'phone email', // Добавлены права доступа
+      });
+
+      const oneTap = new VKID.OneTap();
+
+      oneTap.render({
+        container: document.currentScript.parentElement,
+        scheme: 'dark',
+        showAlternativeLogin: true,
+        styles: {
+          borderRadius: 15,
+          width: 400
+        },
+        oauthList: [
+          'ok_ru',
+          'mail_ru'
+        ]
+      })
+      .on(VKID.WidgetEvents.ERROR, vkidOnError)
+      .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async function (payload) {
+        const code = payload.code;
+        const deviceId = payload.device_id;
+
+        try {
+          const authData = await VKID.Auth.exchangeCode(code, deviceId);
+            alert('Произошла ошибка при авторизации');
+          const userInfo = await fetch('https://id.vk.com/oauth2/user_info', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              client_id: 53531200,
+              access_token: authData.access_token,
+            }),
+          });
+
+          const userData = await userInfo.json();
+            try {
+                const checkAuth = await fetch('/users/check-auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        email: userData.user.email,
+                        phone: userData.user.phone || ''
+                    }),
+                });
+
+                const result = await checkAuth.json();
+                console.log("Статус проверки:", result.Status);
+                alert(result.status);
+            } catch (error) {
+                console.error('Ошибка проверки:', error);
+            }
+
+
+          const container = document.createElement('div');
+          container.className = 'user-data';
+          container.innerHTML = `
+            <h3>Данные пользователя:</h3>
+            <p>Имя: ${userData.user.first_name}</p>
+            <p>Фамилия: ${userData.user.last_name}</p>
+            ${userData.user.phone ? `<p>Телефон: ${userData.user.phone}</p>` : ''}
+            ${userData.user.email ? `<p>Почта: ${userData.user.email}</p>` : ''}
+          `;
+
+          document.body.appendChild(container);
+          vkidOnSuccess(authData);
+        } catch (error) {
+          vkidOnError(error);
+        }
+      });
+    }
+
+    function vkidOnSuccess(data) {
+      console.log('Успешная авторизация:', data);
+    }
+
+    function vkidOnError(error) {
+      console.error('Ошибка авторизации:', error);
+      alert('Произошла ошибка при авторизации');
+    }
+  </script>
+</div>
+</body>
+</html>

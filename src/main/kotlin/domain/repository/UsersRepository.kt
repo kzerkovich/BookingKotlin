@@ -16,4 +16,5 @@ interface UsersRepository {
 
     fun updateUserBanStatus(userId: Int, bannedUntil: Date?): Int
     fun isUserBanned(userId: Int): Boolean
+    fun existsByEmailOrPhone(email: String, phone: String): Boolean
 }

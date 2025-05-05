@@ -58,6 +58,10 @@ class UserService(
         return users
     }
 
+    fun checkUserExists(email: String, phone: String): Boolean {
+        return userRepository.existsByEmailOrPhone(email, phone)
+    }
+
     fun toggleNotifications(userId: Int, enabled: Boolean): User {
         println("Toggling notifications for user $userId to $enabled")
         val user = userRepository.getUser(userId)

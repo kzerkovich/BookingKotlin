@@ -64,4 +64,11 @@ class UsersRepositoryImpl : UsersRepository {
             .firstOrNull()
         user?.bannedUntil?.after(Date()) ?: false
     }
+
+    override fun existsByEmailOrPhone(email: String, phone: String): Boolean = transaction {
+        UserDbModel.selectAll().where {
+            (UserDbModel.email eq email)
+            (UserDbModel.username eq phone)
+        }.count() > 0
+    }
 }

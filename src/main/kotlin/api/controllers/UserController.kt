@@ -19,6 +19,26 @@ class UserController(private val userService: UserService) {
     fun Route.registerRoutes() {
         route("/users") {
 
+            post("/check-auth") {
+                try {
+                    val params = call.receiveParameters()
+                    val email = params["email"] ?: throw IllegalArgumentException("Email required")
+                    val phone = params["phone"] ?: "" // Если нужно проверять телефон
+
+                    val exists = userService.checkUserExists(email, phone)
+
+                    if (exists) {
+                        println("Успех: Пользователь с email $email найден")
+                        call.respond(mapOf("status" to "Успех"))
+                    } else {
+                        println("Ошибка: Пользователь не найден")
+                        call.respond(mapOf("status" to "Ошибка"))
+                    }
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                }
+            }
+
             post {
                 try {
                     val request = call.receive<CreateUserRequest>()
