@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+data:
+  DB_URL: jdbc:postgresql://postgres:5432/booking_db
+  DB_USER: booking_user
+  DB_PASSWORD: booking_pass
